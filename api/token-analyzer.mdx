@@ -1,0 +1,442 @@
+---
+title: "TokenAnalyzer"
+description: "Main application class that orchestrates all tokenization analysis components"
+icon: "microchip"
+---
+
+## Overview
+
+The `TokenAnalyzer` class is the main orchestrator of the Tokenizador application. It coordinates the tokenization service, UI controller, and statistics calculator to provide real-time token analysis and visualization.
+
+<Info>
+This is the entry point for the entire application. It initializes all services and manages the application lifecycle.
+</Info>
+
+## Constructor
+
+Creates a new TokenAnalyzer instance and initializes all dependent services.
+
+```javascript
+const analyzer = new TokenAnalyzer();
+```
+
+The constructor automatically:
+- Instantiates `TokenizationService`, `UIController`, and `StatisticsCalculator`
+- Calls `init()` to set up event handlers and wait for tokenization initialization
+- Configures the UI with the selected model
+
+## Methods
+
+### init()
+
+Initializes the application and sets up event handlers.
+
+```javascript
+async init()
+```
+
+<ParamField body="returns" type="Promise<void>">
+Returns a promise that resolves when initialization is complete
+</ParamField>
+
+**What it does:**
+1. Configures event handlers for text changes, model changes, and clear actions
+2. Waits for the tokenization service to initialize tiktoken
+3. Triggers initial model change to configure the UI
+
+<CodeGroup>
+```javascript Example
+const analyzer = new TokenAnalyzer();
+// Automatically calls init() in constructor
+// Wait for initialization to complete
+await analyzer.init();
+console.log('Application ready!');
+```
+</CodeGroup>
+
+### handleTextChange()
+
+Handles changes in the text input field.
+
+```javascript
+async handleTextChange()
+```
+
+Triggered when the user types or modifies text in the input area. Automatically calls `performRealTimeAnalysis()` to tokenize and analyze the new text.
+
+### handleModelChange()
+
+Handles changes in the model selection dropdown.
+
+```javascript
+async handleModelChange()
+```
+
+<ParamField body="returns" type="Promise<void>">
+Returns a promise that resolves when the model change is processed
+</ParamField>
+
+**What it does:**
+1. Gets the newly selected model ID
+2. Updates model information display (context limit, tokenizer type, pricing)
+3. Re-analyzes the current text with the new model
+
+### handleClear()
+
+Handles the clear button click.
+
+```javascript
+handleClear()
+```
+
+Clears the text input and resets all visualizations to their empty state.
+
+### performRealTimeAnalysis()
+
+Performs real-time tokenization analysis on the current text.
+
+```javascript
+async performRealTimeAnalysis()
+```
+
+<ParamField body="returns" type="Promise<void>">
+Returns a promise that resolves when analysis is complete
+</ParamField>
+
+**Process flow:**
+1. Gets current text and selected model
+2. Returns early if text is empty (resets displays)
+3. Shows loading state in UI
+4. Tokenizes text using `TokenizationService`
+5. Calculates statistics using `StatisticsCalculator`
+6. Updates all UI displays with results
+7. Shows context warnings if applicable
+
+<CodeGroup>
+```javascript Example
+const analyzer = new TokenAnalyzer();
+
+// Manually trigger analysis (normally automatic)
+await analyzer.performRealTimeAnalysis();
+```
+</CodeGroup>
+
+<Warning>
+This method is called automatically on text input and model changes. You typically don't need to call it manually.
+</Warning>
+
+### getState()
+
+Retrieves the current state of the application.
+
+```javascript
+getState()
+```
+
+<ParamField body="returns" type="Object">
+Object containing current application state
+</ParamField>
+
+**Return value structure:**
+
+<ResponseField name="currentText" type="string">
+The current text in the input field
+</ResponseField>
+
+<ResponseField name="selectedModel" type="string">
+The currently selected model ID (e.g., "gpt-4o")
+</ResponseField>
+
+<ResponseField name="isInitialized" type="boolean">
+Whether the tokenization service has finished initializing
+</ResponseField>
+
+<ResponseField name="availableModels" type="string[]">
+Array of all available model IDs from MODELS_DATA
+</ResponseField>
+
+<CodeGroup>
+```javascript Example
+const analyzer = new TokenAnalyzer();
+const state = analyzer.getState();
+
+console.log(state);
+// {
+//   currentText: "Hello world",
+//   selectedModel: "gpt-4o",
+//   isInitialized: true,
+//   availableModels: ["gpt-4o", "claude-3.5-sonnet", ...]
+// }
+```
+</CodeGroup>
+
+### compareModels()
+
+Compares tokenization results across multiple models for the current text.
+
+```javascript
+async compareModels(modelIds)
+```
+
+<ParamField body="modelIds" type="string[]" default="['gpt-4o', 'claude-3.5-sonnet', 'llama-3.1-70b']">
+Array of model IDs to compare
+</ParamField>
+
+<ParamField body="returns" type="Promise<Array>">
+Array of comparison objects sorted by cost (cheapest first)
+</ParamField>
+
+<CodeGroup>
+```javascript Example
+const analyzer = new TokenAnalyzer();
+
+// Compare three models
+const comparison = await analyzer.compareModels([
+  'gpt-4o',
+  'claude-3.5-sonnet',
+  'llama-3.1-70b'
+]);
+
+console.log(comparison);
+// [
+//   { modelId: 'llama-3.1-70b', stats: {...}, formatted: {...} },
+//   { modelId: 'gpt-4o', stats: {...}, formatted: {...} },
+//   { modelId: 'claude-3.5-sonnet', stats: {...}, formatted: {...} }
+// ]
+```
+</CodeGroup>
+
+<Tip>
+Results are automatically sorted by cost, making it easy to find the most cost-effective model for your text.
+</Tip>
+
+### exportResults()
+
+Exports the current analysis results in the specified format.
+
+```javascript
+async exportResults(format)
+```
+
+<ParamField body="format" type="string" default="json">
+Export format: `"json"`, `"csv"`, or `"txt"`
+</ParamField>
+
+<ParamField body="returns" type="Promise<string>">
+Formatted string containing the exported data
+</ParamField>
+
+**Export formats:**
+
+<Tabs>
+  <Tab title="JSON">
+    Complete data with timestamp, model info, statistics, and token details
+    ```json
+    {
+      "timestamp": "2026-03-06T17:00:00.000Z",
+      "model": "gpt-4o",
+      "text": "Hello world",
+      "statistics": {...},
+      "tokens": [...]
+    }
+    ```
+  </Tab>
+  <Tab title="CSV">
+    Tabular format with headers and values
+    ```csv
+    Modelo,Longitud del Texto,Cantidad de Tokens,Cantidad de Palabras,Costo Estimado
+    gpt-4o,11,2,2,0.000001
+    ```
+  </Tab>
+  <Tab title="TXT">
+    Human-readable text report
+    ```text
+    Reporte de Análisis de Tokens
+    =============================
+    Generado: 2026-03-06T17:00:00.000Z
+    Modelo: gpt-4o
+    ...
+    ```
+  </Tab>
+</Tabs>
+
+<CodeGroup>
+```javascript Export JSON
+const analyzer = new TokenAnalyzer();
+const jsonData = await analyzer.exportResults('json');
+
+// Download or save the data
+const blob = new Blob([jsonData], { type: 'application/json' });
+const url = URL.createObjectURL(blob);
+window.location.href = url;
+```
+
+```javascript Export CSV
+const analyzer = new TokenAnalyzer();
+const csvData = await analyzer.exportResults('csv');
+
+// Create downloadable CSV
+const blob = new Blob([csvData], { type: 'text/csv' });
+const url = URL.createObjectURL(blob);
+window.location.href = url;
+```
+</CodeGroup>
+
+### updateDisplays()
+
+Updates all UI visualization components with analysis results.
+
+```javascript
+updateDisplays(tokenResult, statistics)
+```
+
+<ParamField body="tokenResult" type="Object" required>
+Result object from `tokenizeText()` containing tokens array and count
+</ParamField>
+
+<ParamField body="statistics" type="Object" required>
+Statistics object from `calculateStatistics()`
+</ParamField>
+
+This method updates:
+- Statistics display (token count, character count, word count, cost)
+- Visual token representation with color coding
+- Token list with IDs and types
+
+### resetDisplays()
+
+Resets all visualizations to empty state.
+
+```javascript
+resetDisplays()
+```
+
+Sets all statistics to zero and clears the token visualizations.
+
+### showContextWarnings()
+
+Displays warnings if the text exceeds or approaches context limits.
+
+```javascript
+showContextWarnings(statistics, modelId)
+```
+
+<ParamField body="statistics" type="Object" required>
+Calculated statistics object
+</ParamField>
+
+<ParamField body="modelId" type="string" required>
+ID of the model to check limits against
+</ParamField>
+
+Warning thresholds:
+- **100%+**: Text exceeds context limit
+- **90-99%**: Near context limit
+- **75-89%**: High context usage
+
+## Usage Example
+
+<CodeGroup>
+```javascript Complete Example
+// Initialize the application
+const analyzer = new TokenAnalyzer();
+
+// Wait for initialization
+await analyzer.init();
+
+// Get current state
+const state = analyzer.getState();
+console.log('Current model:', state.selectedModel);
+console.log('Is initialized:', state.isInitialized);
+
+// Compare models
+const comparison = await analyzer.compareModels([
+  'gpt-4o',
+  'claude-3.5-sonnet',
+  'llama-3.1-70b'
+]);
+
+console.log('Cheapest model:', comparison[0].modelId);
+
+// Export results
+const results = await analyzer.exportResults('json');
+console.log('Analysis results:', results);
+```
+
+```html HTML Integration
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Tokenizador</title>
+  <script src="js/config/models-data.js"></script>
+  <script src="js/utils/statistics-calculator.js"></script>
+  <script src="js/services/tokenization-service.js"></script>
+  <script src="js/controllers/ui-controller.js"></script>
+  <script src="js/token-analyzer.js"></script>
+</head>
+<body>
+  <div id="app"></div>
+  
+  <script>
+    // Initialize when DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      const analyzer = new TokenAnalyzer();
+    });
+  </script>
+</body>
+</html>
+```
+</CodeGroup>
+
+## Dependencies
+
+The TokenAnalyzer requires these services to be loaded:
+
+<CardGroup cols={3}>
+  <Card title="TokenizationService" icon="code" href="/api/tokenization-service">
+    Handles tiktoken integration and tokenization logic
+  </Card>
+  <Card title="UIController" icon="browser" href="/api/ui-controller">
+    Manages DOM manipulation and user interactions
+  </Card>
+  <Card title="StatisticsCalculator" icon="calculator" href="/api/statistics-calculator">
+    Calculates token statistics and cost estimates
+  </Card>
+</CardGroup>
+
+## Error Handling
+
+The TokenAnalyzer includes comprehensive error handling:
+
+<CodeGroup>
+```javascript Error Handling
+try {
+  const analyzer = new TokenAnalyzer();
+  await analyzer.performRealTimeAnalysis();
+} catch (error) {
+  console.error('Analysis error:', error);
+  // Error is displayed to user via showError() method
+}
+```
+</CodeGroup>
+
+<Note>
+Errors during initialization and analysis are logged to console and displayed to users through the UI.
+</Note>
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="TokenizationService" icon="gear" href="/api/tokenization-service">
+    Learn about the tokenization engine
+  </Card>
+  <Card title="UIController" icon="desktop" href="/api/ui-controller">
+    Explore UI management methods
+  </Card>
+  <Card title="StatisticsCalculator" icon="chart-line" href="/api/statistics-calculator">
+    Understand statistics calculations
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/architecture/overview">
+    View the complete architecture
+  </Card>
+</CardGroup>

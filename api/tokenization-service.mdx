@@ -1,0 +1,593 @@
+---
+title: "TokenizationService"
+description: "Handles text tokenization using tiktoken with intelligent fallback mechanisms"
+icon: "gear"
+---
+
+## Overview
+
+The `TokenizationService` class manages all tokenization operations in Tokenizador. It integrates with the tiktoken library to provide accurate token IDs and counts, with intelligent fallback mechanisms when tiktoken is unavailable.
+
+<Info>
+This service supports 67+ AI models from OpenAI, Anthropic, Google, Meta, and other providers.
+</Info>
+
+## Constructor
+
+Creates a new TokenizationService instance and begins initialization.
+
+```javascript
+const service = new TokenizationService();
+```
+
+**Properties initialized:**
+- `encoder`: null (set after initialization)
+- `isInitialized`: false (set to true when ready)
+- `initPromise`: Promise for initialization tracking
+- `isRealTiktoken`: Indicates if real tiktoken or fallback is being used
+
+## Methods
+
+### initializeTokenizer()
+
+Initializes the tiktoken encoder asynchronously.
+
+```javascript
+async initializeTokenizer()
+```
+
+<ParamField body="returns" type="Promise<void>">
+Resolves when tokenizer is initialized (or fallback is ready)
+</ParamField>
+
+**Initialization process:**
+1. Waits up to 10 seconds for tiktoken library to load
+2. Checks multiple locations: global context, window object
+3. Initializes `cl100k_base` encoding (GPT-4 compatible)
+4. Performs test tokenization to verify functionality
+5. Sets `isRealTiktoken` flag based on tiktoken availability
+
+<CodeGroup>
+```javascript Example
+const service = new TokenizationService();
+await service.waitForInitialization();
+
+if (service.isInitialized) {
+  console.log('Tokenizer ready!');
+  console.log('Using real tiktoken:', service.isRealTiktoken);
+}
+```
+</CodeGroup>
+
+<Warning>
+If tiktoken fails to load, the service automatically uses fallback tokenization. Token IDs will be marked as approximate.
+</Warning>
+
+### waitForInitialization()
+
+Waits for the tokenizer to complete initialization.
+
+```javascript
+async waitForInitialization()
+```
+
+<ParamField body="returns" type="Promise<void>">
+Resolves when initialization is complete
+</ParamField>
+
+<CodeGroup>
+```javascript Example
+const service = new TokenizationService();
+
+// Wait before tokenizing
+await service.waitForInitialization();
+
+// Now safe to tokenize
+const result = await service.tokenizeText('Hello world', 'gpt-4o');
+```
+</CodeGroup>
+
+### tokenizeText()
+
+Tokenizes text using the appropriate method for the specified model.
+
+```javascript
+async tokenizeText(text, modelId)
+```
+
+<ParamField body="text" type="string" required>
+The text to tokenize
+</ParamField>
+
+<ParamField body="modelId" type="string" required>
+Model identifier (e.g., "gpt-4o", "claude-3.5-sonnet")
+</ParamField>
+
+<ParamField body="returns" type="Promise<Object>">
+Object containing tokens array and count
+</ParamField>
+
+**Return value structure:**
+
+<ResponseField name="tokens" type="Array<Object>">
+Array of token objects with text, type, ID, and metadata
+</ResponseField>
+
+<ResponseField name="count" type="number">
+Total number of tokens
+</ResponseField>
+
+**Token object structure:**
+
+<ResponseField name="tokens[].text" type="string">
+The actual text of the token
+</ResponseField>
+
+<ResponseField name="tokens[].type" type="string">
+Token type: "palabra", "subword", "number", "punctuation", "special", "espacio_en_blanco"
+</ResponseField>
+
+<ResponseField name="tokens[].id" type="string">
+Unique identifier for the token (e.g., "token_0")
+</ResponseField>
+
+<ResponseField name="tokens[].tokenId" type="number">
+Numeric token ID from tiktoken (or approximation)
+</ResponseField>
+
+<ResponseField name="tokens[].index" type="number">
+Zero-based position in the token sequence
+</ResponseField>
+
+<ResponseField name="tokens[].isApproximate" type="boolean">
+True if token ID is approximate (fallback mode)
+</ResponseField>
+
+<CodeGroup>
+```javascript Basic Usage
+const service = new TokenizationService();
+await service.waitForInitialization();
+
+const result = await service.tokenizeText('Hello world!', 'gpt-4o');
+
+console.log('Token count:', result.count);
+console.log('Tokens:', result.tokens);
+
+// Output:
+// Token count: 3
+// Tokens: [
+//   { text: 'Hello', type: 'palabra', tokenId: 9906, ... },
+//   { text: ' world', type: 'palabra_con_espacio', tokenId: 1917, ... },
+//   { text: '!', type: 'punctuation', tokenId: 0, ... }
+// ]
+```
+
+```javascript Model Comparison
+const service = new TokenizationService();
+await service.waitForInitialization();
+
+const text = 'The quick brown fox jumps over the lazy dog';
+
+const gptResult = await service.tokenizeText(text, 'gpt-4o');
+const claudeResult = await service.tokenizeText(text, 'claude-3.5-sonnet');
+const llamaResult = await service.tokenizeText(text, 'llama-3.1-70b');
+
+console.log('GPT-4o tokens:', gptResult.count);
+console.log('Claude tokens:', claudeResult.count);
+console.log('Llama tokens:', llamaResult.count);
+```
+</CodeGroup>
+
+<Tip>
+For models using `cl100k_base` encoding (GPT-4, Claude, etc.), token IDs are exact. For other models, counts are adjusted using model-specific ratios.
+</Tip>
+
+### createTokensFromEncoding()
+
+Creates visual token objects from tiktoken encoding.
+
+```javascript
+createTokensFromEncoding(text, encoded, modelId)
+```
+
+<ParamField body="text" type="string" required>
+Original input text
+</ParamField>
+
+<ParamField body="encoded" type="number[]" required>
+Array of token IDs from tiktoken.encode()
+</ParamField>
+
+<ParamField body="modelId" type="string" required>
+Model identifier
+</ParamField>
+
+<ParamField body="returns" type="Array<Object>">
+Array of token objects for visualization
+</ParamField>
+
+**Process:**
+1. Iterates through each encoded token ID
+2. Decodes individual tokens to get exact text
+3. Determines token type based on content
+4. Creates token object with metadata
+5. Marks tokens as approximate if using fallback
+
+<CodeGroup>
+```javascript Example
+const service = new TokenizationService();
+await service.waitForInitialization();
+
+const text = 'Hello world';
+const encoded = service.encoder.encode(text);
+
+const tokens = service.createTokensFromEncoding(text, encoded, 'gpt-4o');
+
+console.log(tokens);
+// [
+//   {
+//     text: 'Hello',
+//     type: 'palabra',
+//     id: 'token_0',
+//     tokenId: 9906,
+//     index: 0,
+//     isApproximate: false
+//   },
+//   ...
+// ]
+```
+</CodeGroup>
+
+### fallbackTokenization()
+
+Provides tokenization when tiktoken is unavailable.
+
+```javascript
+fallbackTokenization(text, modelId)
+```
+
+<ParamField body="text" type="string" required>
+Text to tokenize
+</ParamField>
+
+<ParamField body="modelId" type="string" required>
+Model identifier
+</ParamField>
+
+<ParamField body="returns" type="Object">
+Object with tokens array and count
+</ParamField>
+
+**Fallback strategy:**
+- Splits text into words and whitespace segments
+- Uses heuristics to approximate token boundaries
+- Generates deterministic IDs based on content
+- Marks all tokens as `isApproximate: true`
+
+<Warning>
+Fallback tokenization provides approximate results. Token IDs will not match actual tiktoken IDs but counts are reasonably accurate.
+</Warning>
+
+### splitWordIntoTokens()
+
+Splits a word into smaller tokens simulating tiktoken behavior.
+
+```javascript
+splitWordIntoTokens(word, startIndex)
+```
+
+<ParamField body="word" type="string" required>
+Word to split into tokens
+</ParamField>
+
+<ParamField body="startIndex" type="number" required>
+Starting token index
+</ParamField>
+
+<ParamField body="returns" type="Array<Object>">
+Array of token objects
+</ParamField>
+
+**Algorithm:**
+- Words ≤3 characters: single token
+- Longer words: split based on ~2.8 characters per token ratio
+- First chunk marked as "palabra", subsequent as "subword"
+- Dynamic chunk sizing based on remaining characters
+
+<CodeGroup>
+```javascript Example
+const service = new TokenizationService();
+
+const tokens = service.splitWordIntoTokens('tokenization', 0);
+
+console.log(tokens);
+// [
+//   { text: 'token', type: 'palabra', ... },
+//   { text: 'iza', type: 'subword', ... },
+//   { text: 'tion', type: 'subword', ... }
+// ]
+```
+</CodeGroup>
+
+### determineTokenType()
+
+Determines the type of a token based on its content.
+
+```javascript
+determineTokenType(text)
+```
+
+<ParamField body="text" type="string" required>
+Token text to classify
+</ParamField>
+
+<ParamField body="returns" type="string">
+Token type: "number", "punctuation", "special", or "palabra"
+</ParamField>
+
+**Classification rules:**
+
+<Tabs>
+  <Tab title="Number">
+    Token contains only digits: `^\d+$`
+    ```javascript
+    determineTokenType('123') // => 'number'
+    ```
+  </Tab>
+  <Tab title="Punctuation">
+    Token is only punctuation marks: `^[.,!?;:'"()\[\]{}]+$`
+    ```javascript
+    determineTokenType('.,!') // => 'punctuation'
+    ```
+  </Tab>
+  <Tab title="Special">
+    Token contains only special characters: `^[^\w\s]+$`
+    ```javascript
+    determineTokenType('@#$') // => 'special'
+    ```
+  </Tab>
+  <Tab title="Palabra">
+    Default for word-like tokens
+    ```javascript
+    determineTokenType('hello') // => 'palabra'
+    ```
+  </Tab>
+</Tabs>
+
+### createDeterministicId()
+
+Creates a deterministic numeric ID for fallback tokens.
+
+```javascript
+createDeterministicId(text, index)
+```
+
+<ParamField body="text" type="string" required>
+Token text
+</ParamField>
+
+<ParamField body="index" type="number" required>
+Token index
+</ParamField>
+
+<ParamField body="returns" type="number">
+Deterministic ID in range 10000-109999
+</ParamField>
+
+**Algorithm:**
+1. Generates simple hash from character codes
+2. Combines with index for uniqueness
+3. Normalizes to 5-digit range (10000-109999)
+
+<CodeGroup>
+```javascript Example
+const service = new TokenizationService();
+
+const id1 = service.createDeterministicId('hello', 0);
+const id2 = service.createDeterministicId('hello', 1);
+const id3 = service.createDeterministicId('world', 0);
+
+console.log(id1); // e.g., 45712
+console.log(id2); // e.g., 46712 (same text, different index)
+console.log(id3); // e.g., 52341 (different text)
+```
+</CodeGroup>
+
+### getTokenizerName()
+
+Returns a human-readable name for a tokenizer encoding.
+
+```javascript
+getTokenizerName(encoding)
+```
+
+<ParamField body="encoding" type="string" required>
+Encoding identifier (e.g., "cl100k_base")
+</ParamField>
+
+<ParamField body="returns" type="string">
+Display name for the tokenizer
+</ParamField>
+
+<CodeGroup>
+```javascript Example
+const service = new TokenizationService();
+
+console.log(service.getTokenizerName('o200k_base'));  // "Tokenizador GPT-4o"
+console.log(service.getTokenizerName('cl100k_base')); // "Tokenizador GPT-4"
+console.log(service.getTokenizerName('p50k_base'));   // "Tokenizador GPT-3"
+```
+</CodeGroup>
+
+### getAlgorithmName()
+
+Returns a description of the tokenization algorithm for a model.
+
+```javascript
+getAlgorithmName(modelId)
+```
+
+<ParamField body="modelId" type="string" required>
+Model identifier
+</ParamField>
+
+<ParamField body="returns" type="string">
+Algorithm description
+</ParamField>
+
+<CodeGroup>
+```javascript Example
+const service = new TokenizationService();
+
+console.log(service.getAlgorithmName('gpt-4o'));
+// "o200k_base (GPT Más Reciente)"
+
+console.log(service.getAlgorithmName('claude-3.5-sonnet'));
+// "Tokenización Claude (~20% más tokens)"
+
+console.log(service.getAlgorithmName('llama-3.1-70b'));
+// "Tokenización Llama (~15% menos tokens)"
+```
+</CodeGroup>
+
+## Token Types
+
+The service classifies tokens into these categories:
+
+<CardGroup cols={3}>
+  <Card title="palabra" icon="text">
+    Standard word token
+  </Card>
+  <Card title="subword" icon="text-slash">
+    Part of a longer word
+  </Card>
+  <Card title="palabra_con_espacio" icon="space-awesome">
+    Word with leading space
+  </Card>
+  <Card title="number" icon="hashtag">
+    Numeric token
+  </Card>
+  <Card title="punctuation" icon="circle-dot">
+    Punctuation marks
+  </Card>
+  <Card title="special" icon="asterisk">
+    Special characters
+  </Card>
+  <Card title="espacio_en_blanco" icon="square">
+    Whitespace
+  </Card>
+  <Card title="unknown" icon="question">
+    Decode failure
+  </Card>
+</CardGroup>
+
+## Usage Examples
+
+<CodeGroup>
+```javascript Basic Tokenization
+const service = new TokenizationService();
+await service.waitForInitialization();
+
+const result = await service.tokenizeText(
+  'Hello, world!',
+  'gpt-4o'
+);
+
+console.log(`Tokenized into ${result.count} tokens`);
+result.tokens.forEach(token => {
+  console.log(`"${token.text}" [${token.type}] ID: ${token.tokenId}`);
+});
+```
+
+```javascript Check Tiktoken Status
+const service = new TokenizationService();
+await service.waitForInitialization();
+
+if (service.isRealTiktoken) {
+  console.log('✓ Using real tiktoken - IDs are accurate');
+} else {
+  console.log('⚠ Using fallback - IDs are approximate');
+}
+```
+
+```javascript Model-Specific Tokenization
+const service = new TokenizationService();
+await service.waitForInitialization();
+
+const models = ['gpt-4o', 'claude-3.5-sonnet', 'llama-3.1-70b'];
+const text = 'This is a test sentence for tokenization.';
+
+for (const model of models) {
+  const result = await service.tokenizeText(text, model);
+  console.log(`${model}: ${result.count} tokens`);
+}
+```
+</CodeGroup>
+
+## Model Support
+
+The service supports multiple encoding strategies:
+
+<Accordion title="cl100k_base Models" icon="openai">
+  **OpenAI:** GPT-4, GPT-4 Turbo, GPT-3.5 Turbo  
+  **Anthropic:** Claude 3 Opus, Claude 3.5 Sonnet  
+  **Meta:** Llama 3.1 (with ratio adjustment)  
+  
+  Uses exact tiktoken encoding with model-specific token ratios.
+</Accordion>
+
+<Accordion title="o200k_base Models" icon="sparkles">
+  **OpenAI:** GPT-4o, GPT-4o Mini  
+  
+  Uses newer tokenizer with improved efficiency.
+</Accordion>
+
+<Accordion title="Other Encodings" icon="brain">
+  **Google:** Gemini (SentencePiece approximation)  
+  **Mistral:** Mistral models (ratio-based approximation)  
+  **Cohere:** Command models (ratio-based approximation)  
+  
+  Uses fallback with model-specific token ratios.
+</Accordion>
+
+## Error Handling
+
+<CodeGroup>
+```javascript Handle Initialization Failure
+const service = new TokenizationService();
+await service.waitForInitialization();
+
+if (!service.isInitialized) {
+  console.error('Tokenization service failed to initialize');
+  // Service will use fallback mode automatically
+}
+
+try {
+  const result = await service.tokenizeText('test', 'gpt-4o');
+  console.log('Tokenization successful:', result);
+} catch (error) {
+  console.error('Tokenization error:', error);
+}
+```
+</CodeGroup>
+
+<Note>
+The service gracefully falls back to approximate tokenization if tiktoken fails to load. Your application continues working with slightly reduced accuracy.
+</Note>
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="TokenAnalyzer" icon="microchip" href="/api/token-analyzer">
+    Main application orchestrator
+  </Card>
+  <Card title="StatisticsCalculator" icon="calculator" href="/api/statistics-calculator">
+    Calculate costs and statistics
+  </Card>
+  <Card title="Supported Models" icon="list" href="/guides/supported-models">
+    View all 67+ supported models
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/architecture/overview">
+    Understand the system design
+  </Card>
+</CardGroup>

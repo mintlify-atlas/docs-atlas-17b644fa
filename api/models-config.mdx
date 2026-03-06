@@ -1,0 +1,547 @@
+---
+title: "Models Configuration"
+description: "Complete reference for AI model configurations, encodings, and company branding"
+icon: "sliders"
+---
+
+## Overview
+
+The models configuration module (`models-config.js`) contains comprehensive data about AI language models, their token encodings, pricing, context limits, and company branding information. This configuration powers the model selector and cost calculations throughout the application.
+
+## Configuration Objects
+
+### MODEL_ENCODINGS
+
+A mapping of model identifiers to their tokenization encoding schemes. Most models use `cl100k_base` or `o200k_base` encodings.
+
+<ResponseField name="MODEL_ENCODINGS" type="object" required>
+  Object mapping model IDs to encoding identifiers
+  
+  <Expandable title="properties">
+    <ResponseField name="[modelId]" type="string">
+      The encoding identifier for the model (e.g., `cl100k_base`, `o200k_base`)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+```javascript Example Structure
+MODEL_ENCODINGS = {
+  'gpt-4o': 'o200k_base',
+  'gpt-4': 'cl100k_base',
+  'claude-3.5-sonnet': 'cl100k_base',
+  'gemini-1.5-pro': 'cl100k_base'
+}
+```
+
+```javascript Accessing Encoding
+// Get encoding for a specific model
+const encoding = MODEL_ENCODINGS['gpt-4o'];
+console.log(encoding); // 'o200k_base'
+
+// Check if model has encoding
+if (MODEL_ENCODINGS[modelId]) {
+  // Initialize tokenizer with correct encoding
+}
+```
+</CodeGroup>
+
+<Note>
+Models without native encoding information use `cl100k_base` as an approximation, marked with comments in the source code.
+</Note>
+
+#### Supported Encodings
+
+<Tabs>
+  <Tab title="o200k_base">
+    **OpenAI's latest encoding** (2024+)
+    
+    Used by:
+    - GPT-4o
+    - GPT-4o Mini
+    
+    More efficient token usage than cl100k_base.
+  </Tab>
+  
+  <Tab title="cl100k_base">
+    **Standard encoding** for most models
+    
+    Used by:
+    - GPT-4, GPT-4 Turbo, GPT-3.5 Turbo
+    - Claude 3/3.5 series (approximation)
+    - Gemini 1.5 series (approximation)
+    - Llama, Mistral, and most other models
+    
+    Industry standard for token counting.
+  </Tab>
+</Tabs>
+
+---
+
+### COMPANIES
+
+Company branding information including colors and emoji logos for visual representation in the UI.
+
+<ResponseField name="COMPANIES" type="object" required>
+  Object mapping company names to branding data
+  
+  <Expandable title="properties">
+    <ResponseField name="[companyName]" type="object">
+      Branding information for a company
+      
+      <Expandable title="properties">
+        <ResponseField name="color" type="string" required>
+          Hex color code for the company brand (e.g., `#00a67e`)
+        </ResponseField>
+        
+        <ResponseField name="logo" type="string" required>
+          Emoji character used as the company logo
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+```javascript Example Structure
+COMPANIES = {
+  'OpenAI': { 
+    color: '#00a67e', 
+    logo: '🤖' 
+  },
+  'Anthropic': { 
+    color: '#d97757', 
+    logo: '🧠' 
+  },
+  'Google': { 
+    color: '#4285f4', 
+    logo: '🔍' 
+  }
+}
+```
+
+```javascript Using Company Data
+// Get company branding
+const company = COMPANIES['OpenAI'];
+
+// Apply company color to UI element
+element.style.color = company.color;
+
+// Display company logo
+logoElement.textContent = company.logo;
+
+// Generate company badge
+const badge = `<span style="color: ${company.color}">
+  ${company.logo} ${companyName}
+</span>`;
+```
+</CodeGroup>
+
+#### Supported Companies
+
+<AccordionGroup>
+  <Accordion title="AI Labs (8 companies)">
+    - **OpenAI** - `#00a67e` 🤖
+    - **Anthropic** - `#d97757` 🧠
+    - **Mistral AI** - `#ff6b35` 💨
+    - **Cohere** - `#39a0ed` 🔗
+    - **DeepSeek** - `#2c5aa0` 🔍
+    - **01.AI** - `#1a73e8` 🤖
+    - **AI21 Labs** - `#6c5ce7` 🧪
+    - **xAI** - `#000000` ❌
+  </Accordion>
+  
+  <Accordion title="Tech Giants (5 companies)">
+    - **Google** - `#4285f4` 🔍
+    - **Meta** - `#1877f2` 📘
+    - **Microsoft** - `#00bcf2` 💻
+    - **Amazon** - `#ff9900` 📦
+    - **NVIDIA** - `#76b900` 💚
+  </Accordion>
+  
+  <Accordion title="Other (6 companies)">
+    - **Alibaba** - `#ff6a00` 🛒
+    - **Reka** - `#ff4757` 🦄
+    - **Perplexity** - `#20bf6b` ❓
+    - **IBM** - `#054ada` 💼
+    - **Nous Research** - `#8e44ad` 🔬
+    - **Snowflake** - `#29b5e8` ❄️
+  </Accordion>
+</AccordionGroup>
+
+---
+
+### MODELS_DATA
+
+Complete configuration data for all supported AI models including pricing, context limits, and technical specifications.
+
+<ResponseField name="MODELS_DATA" type="object" required>
+  Object mapping model IDs to complete model configuration
+  
+  <Expandable title="properties">
+    <ResponseField name="[modelId]" type="object">
+      Complete configuration for a specific model
+      
+      <Expandable title="properties">
+        <ResponseField name="name" type="string" required>
+          Display name of the model (e.g., "GPT-4o", "Claude 3.5 Sonnet")
+        </ResponseField>
+        
+        <ResponseField name="company" type="string" required>
+          Company name (must match a key in COMPANIES object)
+        </ResponseField>
+        
+        <ResponseField name="encoding" type="string" required>
+          Tokenization encoding scheme (e.g., "o200k_base", "cl100k_base")
+        </ResponseField>
+        
+        <ResponseField name="contextLimit" type="number" required>
+          Maximum context window size in tokens
+        </ResponseField>
+        
+        <ResponseField name="inputCost" type="number" required>
+          Cost per 1M input tokens in USD
+        </ResponseField>
+        
+        <ResponseField name="outputCost" type="number" required>
+          Cost per 1M output tokens in USD
+        </ResponseField>
+        
+        <ResponseField name="url" type="string" required>
+          External link to model information (typically Artificial Analysis)
+        </ResponseField>
+        
+        <ResponseField name="tokenRatio" type="number" required>
+          Token count adjustment ratio (1.0 = standard, greater than 1.0 = more tokens, less than 1.0 = fewer tokens)
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Model Data Examples
+
+<Tabs>
+  <Tab title="GPT-4o">
+    ```javascript
+    'gpt-4o': {
+      name: 'GPT-4o',
+      company: 'OpenAI',
+      encoding: 'o200k_base',
+      contextLimit: 128000,
+      inputCost: 2.50,
+      outputCost: 10.00,
+      url: 'https://artificialanalysis.ai/models/gpt-4o',
+      tokenRatio: 1.0
+    }
+    ```
+    
+    OpenAI's most capable multimodal model with 128K context window and efficient o200k_base encoding.
+  </Tab>
+  
+  <Tab title="Claude 3.5 Sonnet">
+    ```javascript
+    'claude-3.5-sonnet': {
+      name: 'Claude 3.5 Sonnet',
+      company: 'Anthropic',
+      encoding: 'cl100k_base',
+      contextLimit: 200000,
+      inputCost: 3.00,
+      outputCost: 15.00,
+      url: 'https://artificialanalysis.ai/models/claude-35-sonnet',
+      tokenRatio: 1.1
+    }
+    ```
+    
+    Anthropic's flagship model with 200K context and slightly higher token count (1.1x ratio).
+  </Tab>
+  
+  <Tab title="Gemini 1.5 Pro">
+    ```javascript
+    'gemini-1.5-pro': {
+      name: 'Gemini 1.5 Pro',
+      company: 'Google',
+      encoding: 'cl100k_base',
+      contextLimit: 2097152,
+      inputCost: 1.25,
+      outputCost: 5.00,
+      url: 'https://artificialanalysis.ai/models/gemini-15-pro',
+      tokenRatio: 1.05
+    }
+    ```
+    
+    Google's model with massive 2M token context window and competitive pricing.
+  </Tab>
+  
+  <Tab title="Llama 3.1 70B">
+    ```javascript
+    'llama-3.1-70b': {
+      name: 'Llama 3.1 70B',
+      company: 'Meta',
+      encoding: 'cl100k_base',
+      contextLimit: 131072,
+      inputCost: 0.35,
+      outputCost: 0.40,
+      url: 'https://artificialanalysis.ai/models/llama-31-70b',
+      tokenRatio: 0.95
+    }
+    ```
+    
+    Meta's open-source model with lower token count (0.95x ratio) and affordable pricing.
+  </Tab>
+</Tabs>
+
+## Usage Examples
+
+### Retrieving Model Configuration
+
+```javascript
+// Get complete model data
+const modelData = MODELS_DATA['gpt-4o'];
+
+console.log(modelData.name);          // "GPT-4o"
+console.log(modelData.contextLimit);  // 128000
+console.log(modelData.inputCost);     // 2.50
+```
+
+### Calculating Token Costs
+
+```javascript
+function calculateCost(modelId, inputTokens, outputTokens) {
+  const model = MODELS_DATA[modelId];
+  
+  if (!model) {
+    throw new Error(`Model ${modelId} not found`);
+  }
+  
+  // Apply token ratio adjustment
+  const adjustedInput = inputTokens * model.tokenRatio;
+  const adjustedOutput = outputTokens * model.tokenRatio;
+  
+  // Calculate costs (prices are per 1M tokens)
+  const inputCost = (adjustedInput / 1_000_000) * model.inputCost;
+  const outputCost = (adjustedOutput / 1_000_000) * model.outputCost;
+  
+  return {
+    input: inputCost,
+    output: outputCost,
+    total: inputCost + outputCost
+  };
+}
+
+// Example usage
+const cost = calculateCost('gpt-4o', 50000, 10000);
+console.log(`Total cost: $${cost.total.toFixed(4)}`);
+```
+
+### Building Model Selector UI
+
+```javascript
+function buildModelSelector() {
+  const modelsByCompany = {};
+  
+  // Group models by company
+  Object.entries(MODELS_DATA).forEach(([id, model]) => {
+    if (!modelsByCompany[model.company]) {
+      modelsByCompany[model.company] = [];
+    }
+    modelsByCompany[model.company].push({ id, ...model });
+  });
+  
+  // Build UI with company branding
+  const selectorHTML = Object.entries(modelsByCompany).map(([company, models]) => {
+    const branding = COMPANIES[company];
+    
+    return `
+      <div class="company-group">
+        <div class="company-header" style="color: ${branding.color}">
+          <span class="logo">${branding.logo}</span>
+          <span class="name">${company}</span>
+        </div>
+        <div class="models">
+          ${models.map(m => `
+            <div class="model-option" data-model-id="${m.id}">
+              <span class="model-name">${m.name}</span>
+              <span class="model-context">${(m.contextLimit / 1000).toFixed(0)}K</span>
+              <span class="model-cost">$${m.inputCost}/$${m.outputCost}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  return selectorHTML;
+}
+```
+
+### Validating Context Length
+
+```javascript
+function validateContextLength(modelId, tokenCount) {
+  const model = MODELS_DATA[modelId];
+  
+  if (!model) {
+    return { valid: false, error: 'Model not found' };
+  }
+  
+  // Apply token ratio
+  const adjustedTokens = tokenCount * model.tokenRatio;
+  
+  if (adjustedTokens > model.contextLimit) {
+    return {
+      valid: false,
+      error: `Token count (${adjustedTokens.toFixed(0)}) exceeds model's context limit (${model.contextLimit})`,
+      limit: model.contextLimit,
+      current: adjustedTokens
+    };
+  }
+  
+  return {
+    valid: true,
+    limit: model.contextLimit,
+    current: adjustedTokens,
+    remaining: model.contextLimit - adjustedTokens
+  };
+}
+
+// Example usage
+const validation = validateContextLength('claude-3.5-sonnet', 150000);
+if (!validation.valid) {
+  console.error(validation.error);
+}
+```
+
+### Comparing Model Costs
+
+```javascript
+function compareModelCosts(inputTokens, outputTokens, modelIds) {
+  return modelIds.map(modelId => {
+    const model = MODELS_DATA[modelId];
+    const cost = calculateCost(modelId, inputTokens, outputTokens);
+    
+    return {
+      modelId,
+      name: model.name,
+      company: model.company,
+      cost: cost.total,
+      contextFit: inputTokens + outputTokens <= model.contextLimit
+    };
+  }).sort((a, b) => a.cost - b.cost);
+}
+
+// Example: Find cheapest model for a specific workload
+const comparison = compareModelCosts(100000, 20000, [
+  'gpt-4o',
+  'claude-3.5-sonnet',
+  'gemini-1.5-pro',
+  'llama-3.1-70b'
+]);
+
+console.table(comparison);
+```
+
+## Model Categories
+
+The configuration includes **48 models** across multiple categories:
+
+<CardGroup cols={2}>
+  <Card title="OpenAI Models" icon="robot">
+    5 models including GPT-4o, GPT-4 Turbo, and GPT-3.5 Turbo
+  </Card>
+  
+  <Card title="Anthropic Models" icon="brain">
+    4 Claude models from Haiku to Opus
+  </Card>
+  
+  <Card title="Google Models" icon="search">
+    2 Gemini 1.5 models with massive context windows
+  </Card>
+  
+  <Card title="Open Source Models" icon="code">
+    37 models from Meta, Mistral, Alibaba, and others
+  </Card>
+</CardGroup>
+
+## Token Ratio Explained
+
+The `tokenRatio` field adjusts for differences in how models count tokens:
+
+<AccordionGroup>
+  <Accordion title="Standard (1.0)" icon="equals">
+    OpenAI models and most approximations use 1.0 as the baseline.
+    
+    **Models:** GPT-4o, GPT-4, GPT-4 Turbo, GPT-3.5 Turbo
+  </Accordion>
+  
+  <Accordion title="Higher (greater than 1.0)" icon="arrow-up">
+    Models that typically count more tokens for the same text.
+    
+    **Examples:**
+    - Claude models: 1.1 (10% more tokens)
+    - Gemini models: 1.05 (5% more tokens)
+    - Amazon Titan: 1.04
+    - Snowflake Arctic: 1.06
+  </Accordion>
+  
+  <Accordion title="Lower (less than 1.0)" icon="arrow-down">
+    Models that typically count fewer tokens for the same text.
+    
+    **Examples:**
+    - Llama models: 0.95 (5% fewer tokens)
+    - Alibaba Qwen: 0.92 (8% fewer tokens)
+    - DeepSeek: 0.93
+    - AI21 Jamba: 0.94
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+Token ratios are approximations based on empirical testing. Actual token counts may vary depending on text characteristics.
+</Warning>
+
+## Best Practices
+
+<Steps>
+  <Step title="Always Check Model Availability">
+    ```javascript
+    if (!MODELS_DATA[modelId]) {
+      console.error('Model not found');
+      return;
+    }
+    ```
+  </Step>
+  
+  <Step title="Apply Token Ratio for Accurate Estimates">
+    ```javascript
+    const adjustedTokens = tokenCount * model.tokenRatio;
+    ```
+  </Step>
+  
+  <Step title="Consider Context Limits">
+    Check that your content fits within the model's context window before making API calls.
+  </Step>
+  
+  <Step title="Use Company Branding Consistently">
+    Always reference the COMPANIES object for visual consistency across the UI.
+  </Step>
+</Steps>
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Tokenization Service" icon="scissors" href="/api/tokenization-service">
+    Learn how tokenization works with these encodings
+  </Card>
+  
+  <Card title="Statistics Calculator" icon="calculator" href="/api/statistics-calculator">
+    Implementation details for cost calculations
+  </Card>
+  
+  <Card title="UI Controller" icon="list" href="/api/ui-controller">
+    UI component that uses this configuration
+  </Card>
+  
+  <Card title="Understanding Tokenization" icon="book" href="/guides/understanding-tokenization">
+    Deep dive into tokenization encodings
+  </Card>
+</CardGroup>

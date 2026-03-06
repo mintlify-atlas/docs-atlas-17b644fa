@@ -1,0 +1,638 @@
+---
+title: 'Supported Models'
+description: 'Complete list of all 67+ AI models with pricing, context limits, and specifications'
+icon: 'robot'
+---
+
+Tokenizador supports 67+ AI language models from 19 different providers. Each model has unique characteristics, pricing, and context limits.
+
+## Model Overview
+
+<CardGroup cols={3}>
+  <Card title="67+ Models" icon="robot">
+    Comprehensive coverage of major AI providers
+  </Card>
+  
+  <Card title="19 Providers" icon="building">
+    From OpenAI and Anthropic to specialized providers
+  </Card>
+  
+  <Card title="Real Pricing" icon="dollar-sign">
+    Actual costs per 1M tokens, updated regularly
+  </Card>
+</CardGroup>
+
+## OpenAI Models
+
+<Note>
+  OpenAI models use two primary encodings: `o200k_base` (newer, more efficient) for GPT-4o family, and `cl100k_base` for GPT-4 and GPT-3.5 families.
+</Note>
+
+### GPT-4o Family
+
+<Tabs>
+  <Tab title="GPT-4o">
+    ```javascript
+    // From models-config.js:83-92
+    {
+      name: 'GPT-4o',
+      company: 'OpenAI',
+      encoding: 'o200k_base',
+      contextLimit: 128000,
+      inputCost: 2.50,    // $ per 1M tokens
+      outputCost: 10.00,
+      url: 'https://artificialanalysis.ai/models/gpt-4o',
+      tokenRatio: 1.0
+    }
+    ```
+    
+    **Key Features:**
+    - Latest encoding technology (o200k_base)
+    - 128K token context window
+    - Balanced cost and performance
+    - Multimodal capabilities
+  </Tab>
+  
+  <Tab title="GPT-4o Mini">
+    ```javascript
+    // From models-config.js:93-102
+    {
+      name: 'GPT-4o Mini',
+      company: 'OpenAI',
+      encoding: 'o200k_base',
+      contextLimit: 128000,
+      inputCost: 0.15,    // 94% cheaper than GPT-4o
+      outputCost: 0.60,
+      url: 'https://artificialanalysis.ai/models/gpt-4o-mini',
+      tokenRatio: 1.0
+    }
+    ```
+    
+    **Best For:**
+    - High-volume applications
+    - Cost-sensitive workloads
+    - Fast response times
+    - Same tokenization as GPT-4o
+  </Tab>
+</Tabs>
+
+### GPT-4 Family
+
+| Model | Context Limit | Input Cost | Output Cost | Encoding |
+|-------|--------------|------------|-------------|----------|
+| GPT-4 Turbo | 128,000 | $10.00 | $30.00 | cl100k_base |
+| GPT-4 | 8,192 | $30.00 | $60.00 | cl100k_base |
+| GPT-3.5 Turbo | 16,385 | $0.50 | $1.50 | cl100k_base |
+
+<Tip>
+  GPT-3.5 Turbo offers the best value for simple tasks with 33x lower cost than GPT-4.
+</Tip>
+
+## Anthropic Models
+
+### Claude 3.5 & Claude 3 Family
+
+```javascript
+// Claude models from models-config.js
+// Note: tokenRatio of 1.1 indicates ~10% more tokens than OpenAI models
+```
+
+<CardGroup cols={2}>
+  <Card title="Claude 3.5 Sonnet" icon="brain">
+    **Specifications:**
+    - Context: 200,000 tokens
+    - Input: $3.00 per 1M
+    - Output: $15.00 per 1M
+    - Token Ratio: 1.1x
+    
+    Latest and most capable Claude model with massive context window.
+  </Card>
+  
+  <Card title="Claude 3 Opus" icon="crown">
+    **Specifications:**
+    - Context: 200,000 tokens
+    - Input: $15.00 per 1M
+    - Output: $75.00 per 1M
+    - Token Ratio: 1.1x
+    
+    Most powerful Claude 3 model for complex tasks.
+  </Card>
+  
+  <Card title="Claude 3 Sonnet" icon="bolt">
+    **Specifications:**
+    - Context: 200,000 tokens
+    - Input: $3.00 per 1M
+    - Output: $15.00 per 1M
+    - Token Ratio: 1.1x
+    
+    Balanced performance and cost for most use cases.
+  </Card>
+  
+  <Card title="Claude 3 Haiku" icon="feather">
+    **Specifications:**
+    - Context: 200,000 tokens
+    - Input: $0.25 per 1M
+    - Output: $1.25 per 1M
+    - Token Ratio: 1.1x
+    
+    Fastest and most affordable Claude model.
+  </Card>
+</CardGroup>
+
+<Warning>
+  Claude models typically generate ~10% more tokens than GPT models for the same text due to different tokenization algorithms. Factor this into cost calculations.
+</Warning>
+
+## Google Models
+
+### Gemini 1.5 Series
+
+<Tabs>
+  <Tab title="Gemini 1.5 Pro">
+    ```javascript
+    // models-config.js:173-182
+    {
+      name: 'Gemini 1.5 Pro',
+      company: 'Google',
+      encoding: 'cl100k_base',  // Approximation
+      contextLimit: 2097152,    // 2M tokens!
+      inputCost: 1.25,
+      outputCost: 5.00,
+      tokenRatio: 1.05
+    }
+    ```
+    
+    **Standout Feature:** Largest context window available - over 2 million tokens!
+    
+    Perfect for:
+    - Processing entire codebases
+    - Long document analysis
+    - Multi-document reasoning
+  </Tab>
+  
+  <Tab title="Gemini 1.5 Flash">
+    ```javascript
+    // models-config.js:183-192
+    {
+      name: 'Gemini 1.5 Flash',
+      company: 'Google',
+      encoding: 'cl100k_base',
+      contextLimit: 1048576,    // 1M tokens
+      inputCost: 0.075,
+      outputCost: 0.30,
+      tokenRatio: 1.05
+    }
+    ```
+    
+    **Best Value:** Extremely low cost with massive 1M token context.
+  </Tab>
+</Tabs>
+
+## Meta Models
+
+### Llama 3.1 Series (Latest)
+
+<AccordionGroup>
+  <Accordion title="Llama 3.1 405B - Flagship Model">
+    ```javascript
+    {
+      name: 'Llama 3.1 405B',
+      contextLimit: 131072,  // 131K tokens
+      inputCost: 2.70,
+      outputCost: 2.70,      // Same price for input/output
+      tokenRatio: 0.95       // 5% fewer tokens than GPT
+    }
+    ```
+    
+    - Largest open-source model
+    - Competitive with GPT-4
+    - Token-efficient (5% fewer tokens)
+  </Accordion>
+  
+  <Accordion title="Llama 3.1 70B - Sweet Spot">
+    ```javascript
+    {
+      name: 'Llama 3.1 70B',
+      contextLimit: 131072,
+      inputCost: 0.35,
+      outputCost: 0.40,
+      tokenRatio: 0.95
+    }
+    ```
+    
+    - Best balance of cost and capability
+    - 87% cheaper than GPT-4o
+    - 131K context window
+  </Accordion>
+  
+  <Accordion title="Llama 3.1 8B - Ultra Efficient">
+    ```javascript
+    {
+      name: 'Llama 3.1 8B',
+      contextLimit: 131072,
+      inputCost: 0.055,
+      outputCost: 0.055,
+      tokenRatio: 0.95
+    }
+    ```
+    
+    - Lowest cost option
+    - Surprisingly capable
+    - Same 131K context as larger variants
+  </Accordion>
+</AccordionGroup>
+
+### Llama 3 Series (Previous Generation)
+
+| Model | Context | Input Cost | Output Cost | Best For |
+|-------|---------|------------|-------------|----------|
+| Llama 3 70B | 8,192 | $0.70 | $0.80 | Legacy applications |
+| Llama 3 8B | 8,192 | $0.05 | $0.05 | Budget workloads |
+
+<Note>
+  Llama 3.1 models offer significantly larger context (131K vs 8K) at similar or better pricing. Upgrade if possible.
+</Note>
+
+## Mistral AI Models
+
+<CardGroup cols={2}>
+  <Card title="Mistral Large" icon="server">
+    **128K Context | $2.00 / $6.00**
+    
+    Premier model from Mistral AI
+    - European AI provider
+    - Strong multilingual support
+    - Token ratio: 1.02x
+  </Card>
+  
+  <Card title="Mistral Nemo" icon="zap">
+    **128K Context | $0.15 / $0.15**
+    
+    Fast and affordable
+    - Same pricing for input/output
+    - Large context window
+    - Token ratio: 1.02x
+  </Card>
+  
+  <Card title="Mixtral 8x7B" icon="grid">
+    **32K Context | $0.24 / $0.24**
+    
+    Mixture of Experts architecture
+    - Efficient sparse activation
+    - Good for diverse tasks
+    - Token ratio: 1.02x
+  </Card>
+  
+  <Card title="Mixtral 8x22B" icon="grid-2-plus">
+    **65K Context | $0.65 / $0.65**
+    
+    Larger MoE model
+    - More parameters
+    - Better performance
+    - Token ratio: 1.02x
+  </Card>
+</CardGroup>
+
+## Cohere Models
+
+```javascript
+// Cohere Command models - tokenRatio: 0.98 (slightly more efficient)
+```
+
+<Tabs>
+  <Tab title="Command R+">
+    - Context: 128,000 tokens
+    - Input: $2.50 per 1M
+    - Output: $10.00 per 1M
+    - Optimized for RAG (Retrieval Augmented Generation)
+  </Tab>
+  
+  <Tab title="Command R">
+    - Context: 128,000 tokens
+    - Input: $0.15 per 1M
+    - Output: $0.60 per 1M
+    - Budget-friendly RAG option
+  </Tab>
+</Tabs>
+
+## Specialized Providers
+
+### Alibaba (Qwen Models)
+
+<Accordion title="Qwen 2.5 & Qwen 2 Series">
+  ```javascript
+  // Token ratio: 0.92 (8% more efficient than GPT)
+  ```
+  
+  | Model | Context | Input | Output | Notes |
+  |-------|---------|-------|--------|-------|
+  | Qwen2.5 72B | 131,072 | $0.35 | $0.40 | Latest version |
+  | Qwen2 72B | 131,072 | $0.35 | $0.40 | Stable release |
+  
+  - Strong multilingual (especially Chinese)
+  - Token efficient
+  - Competitive pricing
+</Accordion>
+
+### DeepSeek
+
+<Accordion title="DeepSeek V2.5 & V2">
+  ```javascript
+  // Token ratio: 0.93 (7% more efficient)
+  ```
+  
+  - Context: 131,072 tokens
+  - Input: $0.14 per 1M tokens
+  - Output: $0.28 per 1M tokens
+  - Excellent value proposition
+  - Chinese AI research lab
+</Accordion>
+
+### 01.AI (Yi Models)
+
+<Accordion title="Yi Large & Yi 1.5 34B">
+  | Model | Context | Input | Output | Token Ratio |
+  |-------|---------|-------|--------|-------------|
+  | Yi Large | 32,768 | $0.60 | $0.60 | 0.97 |
+  | Yi 1.5 34B | 32,768 | $0.30 | $0.30 | 0.97 |
+  
+  - Founded by Kai-Fu Lee
+  - Competitive performance
+  - Mid-tier pricing
+</Accordion>
+
+### Microsoft (Phi Models)
+
+<Accordion title="Phi-3.5 & Phi-3 Series">
+  Small but capable models optimized for efficiency:
+  
+  ```javascript
+  // Token ratio: 1.03 (3% more tokens than GPT)
+  ```
+  
+  | Model | Context | Input | Output |
+  |-------|---------|-------|--------|
+  | Phi-3.5 Mini | 131,072 | $0.15 | $0.60 |
+  | Phi-3 Medium | 131,072 | $1.00 | $1.00 |
+  | Phi-3 Mini | 131,072 | $0.15 | $0.60 |
+  
+  - Small model size
+  - Large context window
+  - Good for edge deployment
+</Accordion>
+
+### AI21 Labs (Jamba Models)
+
+<Accordion title="Jamba 1.5 Large & Mini">
+  Hybrid SSM-Transformer architecture:
+  
+  ```javascript
+  // Token ratio: 0.94 (6% more efficient)
+  ```
+  
+  | Model | Context | Input | Output |
+  |-------|---------|-------|--------|
+  | Jamba 1.5 Large | 262,144 | $0.50 | $0.70 |
+  | Jamba 1.5 Mini | 262,144 | $0.10 | $0.10 |
+  
+  **Standout Feature:** 256K token context window at competitive pricing!
+</Accordion>
+
+### xAI (Grok Models)
+
+<Accordion title="Grok-2 & Grok-2 Mini">
+  From Elon Musk's xAI:
+  
+  ```javascript
+  // Token ratio: 1.01 (nearly identical to GPT)
+  ```
+  
+  | Model | Context | Input | Output |
+  |-------|---------|-------|--------|
+  | Grok-2 | 131,072 | $2.00 | $10.00 |
+  | Grok-2 Mini | 131,072 | $0.15 | $0.60 |
+</Accordion>
+
+### Other Providers
+
+<AccordionGroup>
+  <Accordion title="Reka (Reka Core & Flash)">
+    | Model | Context | Input | Output | Token Ratio |
+    |-------|---------|-------|--------|-------------|
+    | Reka Core | 131,072 | $10.00 | $25.00 | 0.99 |
+    | Reka Flash | 131,072 | $0.15 | $0.60 | 0.99 |
+  </Accordion>
+  
+  <Accordion title="Amazon (Titan Text)">
+    | Model | Context | Input | Output | Token Ratio |
+    |-------|---------|-------|--------|-------------|
+    | Titan Text Premier | 32,000 | $0.50 | $1.50 | 1.04 |
+    | Titan Text Express | 8,000 | $0.13 | $0.17 | 1.04 |
+  </Accordion>
+  
+  <Accordion title="Perplexity (Llama Sonar)">
+    | Model | Context | Input | Output | Token Ratio |
+    |-------|---------|-------|--------|-------------|
+    | Llama 3.1 Sonar Large | 131,072 | $1.00 | $1.00 | 0.95 |
+    | Llama 3.1 Sonar Small | 131,072 | $0.20 | $0.20 | 0.95 |
+  </Accordion>
+  
+  <Accordion title="IBM (Granite)">
+    | Model | Context | Input | Output | Token Ratio |
+    |-------|---------|-------|--------|-------------|
+    | Granite 3 8B | 131,072 | $0.055 | $0.055 | 0.96 |
+    | Granite 3 2B | 131,072 | $0.025 | $0.025 | 0.96 |
+  </Accordion>
+  
+  <Accordion title="Nous Research (Hermes)">
+    | Model | Context | Input | Output | Token Ratio |
+    |-------|---------|-------|--------|-------------|
+    | Hermes 3 405B | 131,072 | $2.70 | $2.70 | 0.95 |
+    | Hermes 3 70B | 131,072 | $0.35 | $0.40 | 0.95 |
+  </Accordion>
+  
+  <Accordion title="Snowflake (Arctic)">
+    - Context: 4,096 tokens
+    - Input: $0.24 per 1M
+    - Output: $0.24 per 1M
+    - Token Ratio: 1.06
+  </Accordion>
+  
+  <Accordion title="NVIDIA (Nemotron)">
+    | Model | Context | Input | Output | Token Ratio |
+    |-------|---------|-------|--------|-------------|
+    | Nemotron 70B | 131,072 | $0.35 | $0.40 | 0.98 |
+    | Nemotron Mini | 131,072 | $0.15 | $0.60 | 0.98 |
+  </Accordion>
+</AccordionGroup>
+
+## Model Selection Guide
+
+<Tabs>
+  <Tab title="By Use Case">
+    **High Accuracy Tasks:**
+    - GPT-4o, Claude 3.5 Sonnet, Claude 3 Opus
+    - Gemini 1.5 Pro, Llama 3.1 405B
+    
+    **Cost-Sensitive:**
+    - GPT-4o Mini, Gemini 1.5 Flash
+    - Llama 3.1 8B, DeepSeek V2.5
+    - Granite 3 2B (lowest cost)
+    
+    **Large Context:**
+    - Gemini 1.5 Pro (2M tokens)
+    - Jamba 1.5 (256K tokens)
+    - Claude 3 family (200K tokens)
+    
+    **Fast Response:**
+    - GPT-3.5 Turbo, Claude 3 Haiku
+    - Mistral Nemo, Gemini 1.5 Flash
+  </Tab>
+  
+  <Tab title="By Token Efficiency">
+    **Most Efficient (Fewer Tokens):**
+    1. Qwen models (0.92x - 8% fewer)
+    2. DeepSeek (0.93x - 7% fewer)
+    3. Jamba (0.94x - 6% fewer)
+    4. Llama/Hermes (0.95x - 5% fewer)
+    
+    **Standard Efficiency:**
+    - GPT models (1.0x baseline)
+    - Cohere (0.98x)
+    - Mistral (1.02x)
+    
+    **Less Efficient (More Tokens):**
+    - Claude (1.1x - 10% more)
+    - Google (1.05x - 5% more)
+    - Amazon Titan (1.04x - 4% more)
+  </Tab>
+  
+  <Tab title="By Provider">
+    **OpenAI:** Industry standard, reliable, well-documented
+    
+    **Anthropic:** Strong safety features, long context, thoughtful outputs
+    
+    **Google:** Massive context windows, multimodal strength
+    
+    **Meta:** Open source, token efficient, good value
+    
+    **Mistral AI:** European provider, multilingual, competitive pricing
+    
+    **Specialized:** Niche strengths, often better value in specific domains
+  </Tab>
+</Tabs>
+
+## Pricing Comparison
+
+### Budget Options (< $0.20 per 1M input tokens)
+
+```javascript
+// Sorted by input cost
+const budgetModels = [
+  { model: 'Granite 3 2B',      input: 0.025 },
+  { model: 'Llama 3 8B',        input: 0.05  },
+  { model: 'Llama 3.1 8B',      input: 0.055 },
+  { model: 'Gemini 1.5 Flash',  input: 0.075 },
+  { model: 'Jamba 1.5 Mini',    input: 0.10  },
+  { model: 'DeepSeek V2.5',     input: 0.14  },
+  { model: 'GPT-4o Mini',       input: 0.15  },
+  { model: 'Command R',         input: 0.15  }
+];
+```
+
+### Premium Options (> $5.00 per 1M input tokens)
+
+```javascript
+const premiumModels = [
+  { model: 'Reka Core',        input: 10.00 },
+  { model: 'GPT-4 Turbo',      input: 10.00 },
+  { model: 'Claude 3 Opus',    input: 15.00 },
+  { model: 'GPT-4',            input: 30.00 }
+];
+```
+
+## Token Ratio Reference
+
+<Note>
+  Token ratio indicates how many tokens a model uses compared to GPT (baseline 1.0). Lower is more efficient.
+</Note>
+
+```javascript
+// From models-config.js - tokenRatio values
+const tokenRatios = {
+  'Most Efficient': {
+    'Qwen': 0.92,      // 8% fewer tokens
+    'DeepSeek': 0.93,  // 7% fewer tokens
+    'Jamba': 0.94,     // 6% fewer tokens
+    'Llama': 0.95      // 5% fewer tokens
+  },
+  'Standard': {
+    'GPT': 1.0,        // Baseline
+    'Cohere': 0.98,    // 2% fewer tokens
+    'NVIDIA': 0.98     // 2% fewer tokens
+  },
+  'Less Efficient': {
+    'Mistral': 1.02,   // 2% more tokens
+    'Microsoft': 1.03, // 3% more tokens
+    'Amazon': 1.04,    // 4% more tokens
+    'Google': 1.05,    // 5% more tokens
+    'Claude': 1.1      // 10% more tokens
+  }
+};
+```
+
+## Model Data Structure
+
+All model data comes from `models-config.js`:
+
+```javascript
+// Complete model configuration structure
+const MODELS_DATA = {
+  'model-id': {
+    name: 'Display Name',
+    company: 'Provider Name',
+    encoding: 'o200k_base' | 'cl100k_base',
+    contextLimit: 128000,          // Maximum tokens
+    inputCost: 2.50,              // $ per 1M input tokens
+    outputCost: 10.00,            // $ per 1M output tokens
+    url: 'https://...',           // Artificial Analysis link
+    tokenRatio: 1.0               // Efficiency vs GPT baseline
+  }
+};
+```
+
+## External Resources
+
+<CardGroup cols={2}>
+  <Card title="Artificial Analysis" icon="chart-line" href="https://artificialanalysis.ai">
+    Independent benchmarks and detailed model comparisons
+  </Card>
+  
+  <Card title="OpenAI Tokenizer" icon="code" href="https://platform.openai.com/tokenizer">
+    Official OpenAI tokenization playground
+  </Card>
+  
+  <Card title="Tiktoken Library" icon="github" href="https://github.com/openai/tiktoken">
+    Open source tokenization library used by this tool
+  </Card>
+  
+  <Card title="Model Pricing Updates" icon="bell" href="https://openrouter.ai/docs/models">
+    Track pricing changes across providers
+  </Card>
+</CardGroup>
+
+<Warning>
+  **Pricing Note:** Model prices are updated regularly but may change. Always verify current pricing with the provider before production use.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="How to Use" icon="book-open" href="/guides/how-to-use">
+    Learn how to analyze tokens with Tokenizador
+  </Card>
+  
+  <Card title="Understanding Tokenization" icon="brain" href="/guides/understanding-tokenization">
+    Deep dive into tokenization concepts
+  </Card>
+</CardGroup>

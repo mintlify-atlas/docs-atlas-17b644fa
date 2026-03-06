@@ -1,0 +1,501 @@
+---
+title: "Troubleshooting"
+description: "Solutions to common issues with Tokenizador"
+icon: "wrench"
+---
+
+## Common Issues
+
+### Tokens Not Updating
+
+<Warning>
+If tokens aren't updating as you type, the tokenization service may not be initialized properly.
+</Warning>
+
+**Symptoms:**
+- Token count stays at 0
+- Visualization area shows "Escribe algo para ver los tokens..."
+- Text input works but no results appear
+
+**Solutions:**
+
+<Steps>
+  <Step title="Check browser console">
+    Open DevTools (F12) and look for errors. You should see:
+    ```
+    Tiktoken REAL inicializado correctamente
+    ```
+    or
+    ```
+    🔧 Tiktoken RESPALDO inicializado correctamente
+    ```
+  </Step>
+
+  <Step title="Wait for initialization">
+    The tiktoken library takes 1-2 seconds to load. Try typing after the page fully loads.
+
+    From `tokenization-service.js:22-31`:
+    ```javascript
+    // Waits up to 10 seconds for tiktoken to load
+    let attempts = 0;
+    const maxAttempts = 20;
+    while (attempts < maxAttempts) {
+      if (typeof window !== 'undefined' && window.tiktokenLoaded) {
+        break;
+      }
+      await new Promise(resolve => setTimeout(resolve, 500));
+      attempts++;
+    }
+    ```
+  </Step>
+
+  <Step title="Refresh the page">
+    A hard refresh clears cached resources:
+    - **Windows/Linux**: `Ctrl + Shift + R`
+    - **Mac**: `Cmd + Shift + R`
+  </Step>
+
+  <Step title="Check internet connection">
+    Tokenizador loads the tiktoken library from CDN:
+    ```html
+    <script src="https://cdn.jsdelivr.net/npm/@dqbd/tiktoken@1.0.21/lite/init.min.js"></script>
+    ```
+
+    If this fails to load, the fallback will activate but may be less accurate.
+  </Step>
+</Steps>
+
+<Note>
+The fallback tokenization system will activate automatically if tiktoken fails to load, but results will be approximate.
+</Note>
+
+---
+
+### Incorrect Token Counts
+
+**Symptoms:**
+- Token counts seem too high or too low
+- Numbers don't match other token counters
+- Different results for the same text
+
+**Possible Causes:**
+
+<AccordionGroup>
+  <Accordion title="Different tokenizer being used" icon="code">
+    Tokenizador uses the official tiktoken library. Other tools might use:
+    - Different tokenizers
+    - Older encoding versions
+    - Approximate algorithms
+
+    **Verify you're using the correct model:**
+    - GPT-4o and GPT-4o Mini use `o200k_base` encoding
+    - GPT-4 and GPT-3.5 use `cl100k_base` encoding
+    - Other models use approximations with ratios
+
+    From `models-config.js:83-92`:
+    ```javascript
+    'gpt-4o': {
+      name: 'GPT-4o',
+      encoding: 'o200k_base',  // Different from GPT-4!
+      contextLimit: 128000,
+      tokenRatio: 1.0
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Model-specific tokenization ratios" icon="calculator">
+    Non-OpenAI models use approximations:
+
+    | Model Family | Token Ratio | Effect |
+    |--------------|-------------|--------|
+    | Claude (Anthropic) | 1.1 | 10% more tokens |
+    | Llama (Meta) | 0.95 | 5% fewer tokens |
+    | Gemini (Google) | 1.05 | 5% more tokens |
+    | Mistral | 1.02 | 2% more tokens |
+    | Qwen (Alibaba) | 0.92 | 8% fewer tokens |
+
+    This is **expected behavior** - different models genuinely tokenize text differently!
+  </Accordion>
+
+  <Accordion title="Fallback tokenization active" icon="triangle-exclamation">
+    If tiktoken didn't load, the fallback system provides estimates.
+
+    Check the console for:
+    ```
+    ⚠️ Usando tokenización de respaldo - IDs no serán precisos
+    ```
+
+    **How the fallback works** (from `tokenization-service.js:301-340`):
+    - Splits text into words and spaces
+    - Estimates tokens based on word length
+    - Uses ~2.8 characters per token average
+    - Creates deterministic IDs
+
+    <Warning>
+    Fallback counts are approximate. For accurate counts, ensure tiktoken loads properly.
+    </Warning>
+  </Accordion>
+</AccordionGroup>
+
+**Verification:**
+
+<Steps>
+  <Step title="Test with known text">
+    Try "Hello world" with GPT-4:
+    - Should produce 2 tokens
+    - Token IDs: `[9906, 1917]` (may vary by encoding)
+  </Step>
+
+  <Step title="Check the active algorithm">
+    Look at the "Algoritmo activo" field in Model Information:
+    - `o200k_base` for GPT-4o models
+    - `cl100k_base (BPE)` for GPT-4
+    - Model-specific descriptions for others
+  </Step>
+
+  <Step title="Compare with OpenAI's tokenizer">
+    Use [OpenAI's official tokenizer](https://platform.openai.com/tokenizer) for GPT models to verify counts match.
+  </Step>
+</Steps>
+
+---
+
+### Model Not Loading
+
+**Symptoms:**
+- Model dropdown is empty
+- Can't select a model
+- "undefined" appears in model info
+
+**Solutions:**
+
+<Steps>
+  <Step title="Verify models-config.js loaded">
+    Open console and type:
+    ```javascript
+    console.log(MODELS_DATA);
+    ```
+
+    You should see an object with 67+ model definitions.
+  </Step>
+
+  <Step title="Check for JavaScript errors">
+    Look for syntax errors in the console that might prevent scripts from loading.
+
+    The correct loading order from `index.html:418-424`:
+    ```html
+    <script src="js/config/models-config.js"></script>
+    <script src="js/services/tokenization-service.js"></script>
+    <script src="js/controllers/ui-controller.js"></script>
+    <script src="js/utils/statistics-calculator.js"></script>
+    <script src="js/token-analyzer.js"></script>
+    ```
+  </Step>
+
+  <Step title="Clear browser cache">
+    Old versions of `models-config.js` might be cached:
+    - Chrome: Settings → Privacy → Clear browsing data
+    - Firefox: Settings → Privacy → Clear Data
+    - Safari: Develop → Empty Caches
+  </Step>
+</Steps>
+
+<Note>
+If you're self-hosting, ensure all JavaScript files are properly served with correct MIME types.
+</Note>
+
+---
+
+### Browser Compatibility Issues
+
+**Symptoms:**
+- Layout looks broken
+- Features don't work
+- Console shows errors about unsupported features
+
+**Requirements:**
+
+<CardGroup cols={2}>
+  <Card title="JavaScript" icon="js">
+    - ES6+ support required
+    - Classes, async/await
+    - Arrow functions
+    - Template literals
+  </Card>
+  <Card title="CSS" icon="css3">
+    - CSS Grid
+    - Flexbox
+    - Custom properties (variables)
+    - calc() function
+  </Card>
+  <Card title="HTML5" icon="html5">
+    - Semantic elements
+    - Data attributes
+    - localStorage API
+  </Card>
+  <Card title="APIs" icon="plug">
+    - Fetch API
+    - Promise support
+    - setTimeout/setInterval
+  </Card>
+</CardGroup>
+
+**Browser Version Check:**
+
+| Browser | Minimum Version | Recommended |
+|---------|----------------|-------------|
+| Chrome/Edge | 90+ | Latest |
+| Firefox | 88+ | Latest |
+| Safari | 14+ | Latest |
+| Opera | 76+ | Latest |
+
+**Mobile Compatibility:**
+
+<Tip>
+The app is fully responsive and tested on:
+- iOS Safari 14+
+- Chrome Mobile
+- Samsung Internet
+- Firefox Mobile
+</Tip>
+
+**If you're using an older browser:**
+
+1. Update to the latest version
+2. Enable JavaScript
+3. Check for extensions that block scripts
+4. Try in incognito/private mode
+
+---
+
+### Tiktoken Library Loading Issues
+
+<Warning>
+This is the most common issue affecting tokenization accuracy.
+</Warning>
+
+**Symptoms:**
+- Console shows: `tiktoken no se pudo cargar desde CDN`
+- Fallback system activates
+- Token IDs are marked as approximate
+
+**Why it happens:**
+- CDN is blocked by firewall/network
+- Ad blocker interfering
+- CORS issues
+- CDN temporarily unavailable
+
+**Fallback System:**
+
+Tokenizador includes a robust fallback (from `index.html:76-144`):
+
+```javascript
+// Waits 2 seconds for tiktoken to load
+setTimeout(() => {
+  if (typeof tiktoken === 'undefined') {
+    console.warn('tiktoken no se pudo cargar desde CDN');
+    console.log('🔧 Usando implementación de respaldo');
+    
+    // Creates a basic tokenization implementation
+    window.tiktoken = {
+      get_encoding: function(encoding) {
+        return {
+          encode: function(text) {
+            // Estimation algorithm
+            // Splits words and estimates tokens
+          },
+          decode: function(tokens) {
+            // Basic decoding
+          }
+        };
+      }
+    };
+  }
+}, 2000);
+```
+
+**Solutions:**
+
+<Steps>
+  <Step title="Check CDN access">
+    Test if you can access:
+    ```
+    https://cdn.jsdelivr.net/npm/@dqbd/tiktoken@1.0.21/lite/init.min.js
+    ```
+
+    Open this URL in your browser. If it doesn't load, you have a network issue.
+  </Step>
+
+  <Step title="Disable ad blockers temporarily">
+    Some ad blockers (uBlock Origin, Brave Shield) block CDN scripts.
+
+    Try disabling them for tokenizador.alblandino.com
+  </Step>
+
+  <Step title="Check Content Security Policy">
+    If self-hosting, ensure your CSP allows:
+    ```html
+    <meta http-equiv="Content-Security-Policy" 
+          content="script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;">
+    ```
+  </Step>
+
+  <Step title="Use the fallback">
+    The fallback system works well for most use cases:
+    - Provides reasonable estimates
+    - Handles all model types
+    - Marks tokens as "approximate"
+
+    <Note>
+    Accuracy is typically within 5-10% of actual tiktoken results.
+    </Note>
+  </Step>
+
+  <Step title="Self-host tiktoken (advanced)">
+    Download and host tiktoken locally:
+    ```bash
+    npm install @dqbd/tiktoken
+    ```
+
+    Update the script tag in `index.html`:
+    ```html
+    <script src="/local/path/to/tiktoken.js"></script>
+    ```
+  </Step>
+</Steps>
+
+**Diagnostics:**
+
+Tokenizador includes diagnostic logging (from `index.html:148-181`):
+
+```javascript
+window.addEventListener('load', () => {
+  console.log('DIAGNÓSTICO TIKTOKEN:');
+  console.log('- typeof tiktoken:', typeof tiktoken);
+  console.log('- tiktoken disponible:', 
+    typeof tiktoken !== 'undefined');
+  
+  // Tests tokenization
+  if (typeof tiktoken !== 'undefined') {
+    const encoder = tiktoken.get_encoding('cl100k_base');
+    const testTokens = encoder.encode('Hola mundo');
+    console.log('Prueba exitosa:', testTokens);
+  }
+});
+```
+
+<Tip>
+Check your browser console for these diagnostic messages - they'll tell you exactly what's happening with tiktoken.
+</Tip>
+
+---
+
+## Performance Issues
+
+### Slow Tokenization
+
+**For very long texts (>50,000 characters):**
+
+<Steps>
+  <Step title="Break into smaller chunks">
+    Tokenize sections separately for better performance.
+  </Step>
+
+  <Step title="Disable visualization">
+    Token visualization can be slow for huge texts. Focus on the token count instead.
+  </Step>
+
+  <Step title="Use a faster model">
+    Some model configurations process faster:
+    - GPT-4o (o200k_base) is optimized
+    - Smaller models have lower context limits but faster processing
+  </Step>
+</Steps>
+
+### High Memory Usage
+
+**Symptoms:**
+- Browser tab becomes sluggish
+- Page crashes with very long text
+
+**Solutions:**
+
+<Note>
+The token visualization stores all token objects in memory. For texts >100k tokens, this can be intensive.
+</Note>
+
+- Clear text and start fresh
+- Close other browser tabs
+- Use the Clear button frequently
+- Consider exporting results instead of keeping them in the UI
+
+---
+
+## Error Messages
+
+### "Error al analizar el texto"
+
+**Full error from token-analyzer.js:103:**
+```javascript
+catch (error) {
+  console.error('Error durante el análisis:', error);
+  this.showError('Error al analizar el texto. Por favor, inténtalo de nuevo.');
+}
+```
+
+**Causes:**
+- Tokenization service not initialized
+- Invalid model selected
+- Text contains problematic characters
+
+**Solutions:**
+1. Refresh the page
+2. Wait for initialization to complete
+3. Try a different model
+4. Check console for specific error details
+
+### "oldString not found in content" (Development)
+
+This error occurs when trying to use the Edit tool on files.
+
+**Not relevant for end users** - only affects developers modifying the source code.
+
+---
+
+## Getting Help
+
+<CardGroup cols={2}>
+  <Card title="FAQ" icon="circle-question" href="/resources/faq">
+    Check frequently asked questions
+  </Card>
+  <Card title="GitHub Issues" icon="github" href="https://github.com/alblandino/tokenizador/issues">
+    Report bugs or request features
+  </Card>
+  <Card title="View Source" icon="code" href="https://github.com/alblandino/tokenizador">
+    Examine the code for debugging
+  </Card>
+  <Card title="How to Use Guide" icon="book" href="/guides/how-to-use">
+    Complete usage instructions
+  </Card>
+</CardGroup>
+
+## Still Having Issues?
+
+If none of these solutions work:
+
+1. **Open a GitHub issue** with:
+   - Your browser and version
+   - Console error messages (screenshot)
+   - Steps to reproduce
+   - Text that causes the issue (if applicable)
+
+2. **Check browser console** for detailed error messages:
+   - Press F12 (Windows/Linux) or Cmd+Option+I (Mac)
+   - Click "Console" tab
+   - Look for red error messages
+
+3. **Try the live demo** at [tokenizador.alblandino.com](https://tokenizador.alblandino.com) to see if it's a local issue
+
+<Tip>
+Include the diagnostic output from the console when reporting issues - it helps identify the root cause quickly!
+</Tip>

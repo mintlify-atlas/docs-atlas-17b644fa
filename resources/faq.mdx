@@ -1,0 +1,355 @@
+---
+title: "Frequently Asked Questions"
+description: "Common questions about Tokenizador and AI tokenization"
+icon: "circle-question"
+---
+
+## General Questions
+
+<AccordionGroup>
+  <Accordion title="What is tokenization?" icon="scissors">
+    Tokenization is the process AI models use to break down text into smaller units called "tokens." These tokens are the building blocks that language models process and understand.
+
+    Think of tokens as puzzle pieces:
+    - A token can be a whole word (e.g., "hello")
+    - A token can be part of a word (e.g., "un" + "believable")
+    - A token can be a punctuation mark or space
+    - Numbers and special characters are also tokenized
+
+    **Why it matters:**
+    - API costs are calculated per token
+    - Models have maximum token limits (context windows)
+    - Different models tokenize the same text differently
+
+    <Tip>
+    On average, one token equals approximately 4 characters of English text, or roughly 0.75 words.
+    </Tip>
+  </Accordion>
+
+  <Accordion title="Why do different models have different token counts?" icon="microchip">
+    Different AI models use different tokenization algorithms and vocabularies, which leads to varying token counts for the same text.
+
+    **Key factors:**
+
+    1. **Tokenizer Algorithm**: Each model uses its own encoding strategy
+       - OpenAI GPT-4o uses `o200k_base`
+       - OpenAI GPT-4/3.5 use `cl100k_base` (BPE)
+       - Claude models have approximately 20% more tokens
+       - Llama models have approximately 15% fewer tokens
+
+    2. **Vocabulary Size**: Larger vocabularies can represent text with fewer tokens
+
+    3. **Language Optimization**: Some tokenizers work better with certain languages
+
+    **Example from models-config.js:**
+    ```javascript
+    'claude-3.5-sonnet': {
+      tokenRatio: 1.1  // 10% more tokens than GPT baseline
+    },
+    'llama-3.1-405b': {
+      tokenRatio: 0.95  // 5% fewer tokens than GPT baseline
+    }
+    ```
+
+    <Note>
+    Tokenizador applies model-specific ratios to provide accurate token counts for each of the 67+ supported models.
+    </Note>
+  </Accordion>
+
+  <Accordion title="How accurate are the cost estimates?" icon="dollar-sign">
+    The cost estimates in Tokenizador are based on current pricing from AI providers and are **highly accurate** for input tokens.
+
+    **What's included:**
+    - Real-time pricing per 1M tokens
+    - Model-specific input and output costs
+    - Accurate token counts using the tiktoken library
+
+    **Important notes:**
+
+    <Warning>
+    The displayed cost is for **input tokens only**. Output costs are typically higher and depend on the length of the model's response.
+    </Warning>
+
+    **Cost calculation from models-config.js:**
+    ```javascript
+    'gpt-4o': {
+      inputCost: 2.50,   // $2.50 per 1M input tokens
+      outputCost: 10.00  // $10.00 per 1M output tokens
+    }
+    ```
+
+    Prices are pulled from official provider pricing pages and [artificialanalysis.ai](https://artificialanalysis.ai).
+
+    <Tip>
+    Use the cost estimates to compare model efficiency. Sometimes a more expensive model with better tokenization can be more cost-effective!
+    </Tip>
+  </Accordion>
+
+  <Accordion title="Can I use Tokenizador offline?" icon="wifi-slash">
+    **Partially, yes** - but with limitations.
+
+    **What works offline:**
+    - The core application interface
+    - Model selection and configuration
+    - Basic text input functionality
+
+    **What requires internet:**
+    - **Tiktoken library** (loaded from CDN)
+    - **Font Awesome icons** (loaded from CDN)
+    - **Google Fonts** (loaded from Google's CDN)
+
+    **Fallback mechanism:**
+
+    Tokenizador includes a fallback tokenization system (see `index.html:76-144`) that activates if the tiktoken library fails to load:
+
+    ```javascript
+    // Fallback implementation if tiktoken doesn't load
+    window.tiktoken = {
+      get_encoding: function(encoding) {
+        return {
+          encode: function(text) {
+            // Basic estimation algorithm
+            // Splits words and estimates tokens
+          }
+        }
+      }
+    }
+    ```
+
+    <Note>
+    The fallback provides **approximate** token counts but won't have the precision of the actual tiktoken library.
+    </Note>
+
+    **For true offline use:**
+    You would need to self-host the tiktoken library and other CDN resources.
+  </Accordion>
+
+  <Accordion title="What browsers are supported?" icon="browser">
+    Tokenizador is built with modern web standards and supports all current browsers.
+
+    **Fully supported:**
+    - ✅ **Chrome/Edge** (v90+) - Recommended
+    - ✅ **Firefox** (v88+)
+    - ✅ **Safari** (v14+)
+    - ✅ **Opera** (v76+)
+
+    **Mobile browsers:**
+    - ✅ **Chrome Mobile**
+    - ✅ **Safari iOS** (v14+)
+    - ✅ **Samsung Internet**
+    - ✅ **Firefox Mobile**
+
+    **Requirements:**
+    - JavaScript must be enabled
+    - HTML5 support required
+    - Modern CSS support (Grid, Flexbox)
+
+    **Features used:**
+    - ES6+ JavaScript (classes, async/await, arrow functions)
+    - Fetch API for resource loading
+    - localStorage for potential future features
+    - CSS custom properties (variables)
+
+    <Tip>
+    The app is fully responsive and works great on tablets and phones thanks to the mobile-first design approach.
+    </Tip>
+
+    **Testing meta tag from index.html:**
+    ```html
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    ```
+  </Accordion>
+
+  <Accordion title="How is Tokenizador different from other token counters?" icon="chart-line">
+    Tokenizador stands out with several unique features:
+
+    **1. Extensive Model Support (67+ models)**
+    - OpenAI, Anthropic, Google, Meta, Mistral AI
+    - Plus 14 more providers including xAI, Amazon, NVIDIA, IBM
+    - Most token counters only support OpenAI models
+
+    **2. Real Token IDs**
+    - Uses the official tiktoken library
+    - Shows actual token IDs, not approximations
+    - Provides accurate token visualization
+
+    **3. Interactive Visualization**
+    - Color-coded tokens by type
+    - Hover to see individual token details
+    - Visual token breakdown with IDs
+
+    **4. Cost Estimation**
+    - Real-time cost calculation
+    - Model-specific pricing
+    - Updated from artificialanalysis.ai
+
+    **5. Context Warnings**
+    - Alerts when approaching model limits
+    - Shows context window for each model
+    - Helps prevent truncated inputs
+
+    **6. Professional Architecture**
+    ```
+    token-analyzer.js          → Main orchestration
+    tokenization-service.js    → Tiktoken integration
+    ui-controller.js           → Interface management
+    statistics-calculator.js   → Metrics & analysis
+    models-config.js          → 67+ model definitions
+    ```
+
+    **7. Open Source & Free**
+    - No API keys required
+    - No registration needed
+    - Client-side processing (privacy-focused)
+    - Available on GitHub
+
+    <Card title="Compare for yourself" icon="link" href="https://tokenizador.alblandino.com">
+      Try Tokenizador live and see the difference
+    </Card>
+  </Accordion>
+</AccordionGroup>
+
+## Technical Questions
+
+<AccordionGroup>
+  <Accordion title="Which tokenization encoding does each model use?" icon="code">
+    Tokenizador uses the tiktoken library with specific encodings for different model families.
+
+    **Primary Encodings:**
+
+    | Encoding | Models | Description |
+    |----------|--------|-------------|
+    | `o200k_base` | GPT-4o, GPT-4o Mini | Latest OpenAI encoding |
+    | `cl100k_base` | GPT-4, GPT-3.5, Claude, Gemini, Llama, etc. | Standard BPE encoding |
+
+    **From models-config.js:**
+    ```javascript
+    MODEL_ENCODINGS = {
+      'gpt-4o': 'o200k_base',
+      'gpt-4o-mini': 'o200k_base',
+      'gpt-4': 'cl100k_base',
+      'claude-3.5-sonnet': 'cl100k_base', // Approximation
+      'llama-3.1-405b': 'cl100k_base',    // Approximation
+    }
+    ```
+
+    <Note>
+    Non-OpenAI models use `cl100k_base` as an approximation with model-specific ratios applied to match actual tokenization behavior.
+    </Note>
+  </Accordion>
+
+  <Accordion title="Can I integrate Tokenizador into my application?" icon="puzzle-piece">
+    Yes! Tokenizador is built with a modular architecture that's easy to integrate.
+
+    **Using the classes directly:**
+
+    ```javascript
+    // Initialize the analyzer
+    const analyzer = new TokenAnalyzer();
+
+    // Wait for initialization
+    await analyzer.tokenizationService.waitForInitialization();
+
+    // Tokenize text
+    const result = await analyzer.tokenizationService.tokenizeText(
+      "Your text here",
+      "gpt-4o"
+    );
+
+    console.log(result.tokens); // Array of token objects
+    console.log(result.count);  // Total token count
+    ```
+
+    **Export functionality:**
+
+    ```javascript
+    // Export results in different formats
+    const jsonData = await analyzer.exportResults('json');
+    const csvData = await analyzer.exportResults('csv');
+    const txtData = await analyzer.exportResults('txt');
+    ```
+
+    **Compare models:**
+
+    ```javascript
+    const comparison = await analyzer.compareModels([
+      'gpt-4o',
+      'claude-3.5-sonnet',
+      'llama-3.1-70b'
+    ]);
+    ```
+
+    <Card title="View Source Code" icon="github" href="https://github.com/alblandino/tokenizador">
+      Fork the project and customize it for your needs
+    </Card>
+  </Accordion>
+
+  <Accordion title="What data does Tokenizador collect?" icon="shield-check">
+    Tokenizador is privacy-focused and processes everything **client-side**.
+
+    **What we collect:**
+    - Anonymous usage analytics via Google Analytics
+    - Page views and interaction events
+    - No personal information
+    - No text content you analyze
+
+    **What we DON'T collect:**
+    - ❌ Your input text
+    - ❌ Tokenization results
+    - ❌ Personal information
+    - ❌ IP addresses (beyond GA anonymization)
+    - ❌ Authentication data (no accounts needed)
+
+    **From index.html analytics setup:**
+    ```javascript
+    // Track important user interactions
+    trackEvent('model_selected', 'Model Selection', modelName);
+    trackEvent('text_analyzed', 'Text Analysis', 'characters', length);
+    ```
+
+    <Tip>
+    All tokenization happens in your browser. Your text never leaves your device.
+    </Tip>
+  </Accordion>
+
+  <Accordion title="How often is pricing data updated?" icon="clock">
+    Model pricing is configured manually and updated periodically.
+
+    **Current approach:**
+    - Pricing is hardcoded in `models-config.js`
+    - Updated when providers change pricing
+    - Cross-referenced with [artificialanalysis.ai](https://artificialanalysis.ai)
+
+    **Verification:**
+    Each model includes a direct link to Artificial Analysis for the most current pricing:
+
+    ```javascript
+    'gpt-4o': {
+      inputCost: 2.50,
+      outputCost: 10.00,
+      url: 'https://artificialanalysis.ai/models/gpt-4o'
+    }
+    ```
+
+    <Note>
+    Click the "Ver en Artificial Analysis" link on any model to check the latest official pricing.
+    </Note>
+  </Accordion>
+</AccordionGroup>
+
+## Need More Help?
+
+<CardGroup cols={2}>
+  <Card title="Troubleshooting" icon="wrench" href="/resources/troubleshooting">
+    Solutions to common issues and errors
+  </Card>
+  <Card title="GitHub Issues" icon="github" href="https://github.com/alblandino/tokenizador/issues">
+    Report bugs or request features
+  </Card>
+  <Card title="How to Use" icon="book" href="/guides/how-to-use">
+    Complete guide to using Tokenizador
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/architecture/overview">
+    Learn about the technical architecture
+  </Card>
+</CardGroup>

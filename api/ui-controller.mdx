@@ -1,0 +1,748 @@
+---
+title: "UIController"
+description: "Manages all user interface interactions and DOM manipulation"
+icon: "browser"
+---
+
+## Overview
+
+The `UIController` class handles all user interface operations in Tokenizador. It manages DOM elements, event handlers, and visual updates for statistics, token visualization, and model information.
+
+<Info>
+This controller follows the separation of concerns principle, isolating all DOM manipulation from business logic.
+</Info>
+
+## Constructor
+
+Creates a new UIController instance and initializes the interface.
+
+```javascript
+const controller = new UIController();
+```
+
+**Initialization steps:**
+1. Caches all DOM element references
+2. Binds event listeners to interactive elements
+3. Updates footer year to current year
+4. Sets default model selection to "gpt-4o"
+
+## Properties
+
+### elements
+
+Cached references to all DOM elements used by the controller.
+
+<ResponseField name="elements.textInput" type="HTMLTextAreaElement">
+Main text input area (`#text-input`)
+</ResponseField>
+
+<ResponseField name="elements.modelSelect" type="HTMLSelectElement">
+Model selection dropdown (`#model-select`)
+</ResponseField>
+
+<ResponseField name="elements.clearBtn" type="HTMLButtonElement">
+Clear button (`#clear-btn`)
+</ResponseField>
+
+<ResponseField name="elements.tokensContainer" type="HTMLElement">
+Container for visual token display (`#tokens-container`)
+</ResponseField>
+
+<ResponseField name="elements.tokensArray" type="HTMLElement">
+Container for token list with IDs (`#tokens-array`)
+</ResponseField>
+
+<ResponseField name="elements.tokenCount" type="HTMLElement">
+Token count display (`#token-count`)
+</ResponseField>
+
+<ResponseField name="elements.charCount" type="HTMLElement">
+Character count display (`#char-count`)
+</ResponseField>
+
+<ResponseField name="elements.wordCount" type="HTMLElement">
+Word count display (`#word-count`)
+</ResponseField>
+
+<ResponseField name="elements.costEstimate" type="HTMLElement">
+Cost estimate display (`#cost-estimate`)
+</ResponseField>
+
+## Methods
+
+### initializeElements()
+
+Initializes and caches DOM element references.
+
+```javascript
+initializeElements()
+```
+
+<ParamField body="returns" type="Object">
+Object containing all cached DOM elements
+</ParamField>
+
+This method is called automatically by the constructor. It uses `document.getElementById()` to retrieve and cache elements for efficient access.
+
+<Warning>
+If any required DOM elements are missing, methods that use them will safely skip operations.
+</Warning>
+
+### bindEvents()
+
+Binds event listeners to interactive elements.
+
+```javascript
+bindEvents()
+```
+
+**Events bound:**
+- **input** on text area → triggers `onTextChange` callback
+- **change** on model select → triggers `onModelChange` callback
+- **click** on clear button → triggers `onClear` callback
+- **keydown** (Ctrl+K) → focuses text input
+
+<CodeGroup>
+```javascript Custom Event Handling
+const controller = new UIController();
+
+// Set custom event handlers
+controller.setEventHandlers({
+  onTextChange: () => console.log('Text changed'),
+  onModelChange: () => console.log('Model changed'),
+  onClear: () => console.log('Clear clicked')
+});
+```
+</CodeGroup>
+
+### setEventHandlers()
+
+Sets callback functions for UI events.
+
+```javascript
+setEventHandlers(handlers)
+```
+
+<ParamField body="handlers" type="Object" required>
+Object containing event handler functions
+</ParamField>
+
+<ParamField body="handlers.onTextChange" type="Function">
+Called when text input changes
+</ParamField>
+
+<ParamField body="handlers.onModelChange" type="Function">
+Called when model selection changes
+</ParamField>
+
+<ParamField body="handlers.onClear" type="Function">
+Called when clear button is clicked
+</ParamField>
+
+<CodeGroup>
+```javascript Example
+const controller = new UIController();
+
+controller.setEventHandlers({
+  onTextChange: async () => {
+    console.log('Analyzing text...');
+    // Perform analysis
+  },
+  onModelChange: async () => {
+    console.log('Model changed');
+    // Update analysis with new model
+  },
+  onClear: () => {
+    console.log('Clearing input');
+    // Reset displays
+  }
+});
+```
+</CodeGroup>
+
+### getTextInput()
+
+Retrieves the current text from the input area.
+
+```javascript
+getTextInput()
+```
+
+<ParamField body="returns" type="string">
+Current text content (empty string if element not found)
+</ParamField>
+
+<CodeGroup>
+```javascript Example
+const controller = new UIController();
+const text = controller.getTextInput();
+
+if (text.trim()) {
+  console.log('User entered:', text);
+} else {
+  console.log('Input is empty');
+}
+```
+</CodeGroup>
+
+### getSelectedModel()
+
+Retrieves the currently selected model ID.
+
+```javascript
+getSelectedModel()
+```
+
+<ParamField body="returns" type="string">
+Selected model ID (defaults to "gpt-4o" if not found)
+</ParamField>
+
+<CodeGroup>
+```javascript Example
+const controller = new UIController();
+const modelId = controller.getSelectedModel();
+
+console.log('Current model:', modelId);
+// Output: "gpt-4o" or "claude-3.5-sonnet" etc.
+```
+</CodeGroup>
+
+### clearTextInput()
+
+Clears the text input and focuses it.
+
+```javascript
+clearTextInput()
+```
+
+Sets the input value to empty string and focuses the element for immediate typing.
+
+<CodeGroup>
+```javascript Example
+const controller = new UIController();
+
+// Clear and focus input
+controller.clearTextInput();
+// User can start typing immediately
+```
+</CodeGroup>
+
+### updateStatistics()
+
+Updates the statistics display with new values.
+
+```javascript
+updateStatistics(stats)
+```
+
+<ParamField body="stats" type="Object" default="{}">
+Statistics object with token, character, word counts and cost
+</ParamField>
+
+<ParamField body="stats.tokenCount" type="number">
+Number of tokens
+</ParamField>
+
+<ParamField body="stats.charCount" type="number">
+Number of characters
+</ParamField>
+
+<ParamField body="stats.wordCount" type="number">
+Number of words
+</ParamField>
+
+<ParamField body="stats.costEstimate" type="number">
+Estimated cost in dollars
+</ParamField>
+
+<CodeGroup>
+```javascript Example
+const controller = new UIController();
+
+controller.updateStatistics({
+  tokenCount: 1247,
+  charCount: 5832,
+  wordCount: 892,
+  costEstimate: 0.002494
+});
+
+// Display updates to:
+// Token Count: 1,247
+// Character Count: 5,832
+// Word Count: 892
+// Cost Estimate: $0.002494
+```
+
+```javascript Reset Statistics
+const controller = new UIController();
+
+// Reset all stats to zero
+controller.updateStatistics({
+  tokenCount: 0,
+  charCount: 0,
+  wordCount: 0,
+  costEstimate: 0
+});
+```
+</CodeGroup>
+
+<Note>
+Numbers are automatically formatted with thousand separators (e.g., 1,247) for better readability.
+</Note>
+
+### updateModelInfo()
+
+Updates the model information display.
+
+```javascript
+updateModelInfo(modelId, tokenizationService)
+```
+
+<ParamField body="modelId" type="string" required>
+Model identifier (e.g., "gpt-4o")
+</ParamField>
+
+<ParamField body="tokenizationService" type="TokenizationService" required>
+Tokenization service instance for retrieving algorithm names
+</ParamField>
+
+**Updates displayed:**
+- Model name
+- Context limit (formatted with thousands separator)
+- Tokenizer type (e.g., "Tokenizador GPT-4")
+- Pricing (input and output costs per 1M tokens)
+- Active tokenization algorithm
+- Model details link (if URL available)
+
+<CodeGroup>
+```javascript Example
+const controller = new UIController();
+const service = new TokenizationService();
+
+controller.updateModelInfo('gpt-4o', service);
+
+// Displays:
+// Model: gpt-4o
+// Context Limit: 128,000
+// Tokenizer: Tokenizador GPT-4o
+// Cost: Entrada: $2.50/1M | Salida: $10.00/1M
+// Algorithm: o200k_base (GPT Más Reciente)
+```
+</CodeGroup>
+
+### updateTokenVisualization()
+
+Updates the visual token display with color-coded tokens.
+
+```javascript
+updateTokenVisualization(tokens)
+```
+
+<ParamField body="tokens" type="Array<Object>" default="[]">
+Array of token objects from tokenization
+</ParamField>
+
+Creates `<span>` elements for each token with:
+- CSS class based on token type (for color coding)
+- `approximate-id` class if token ID is approximate
+- Click handler to highlight token in list
+
+<CodeGroup>
+```javascript Example
+const controller = new UIController();
+
+const tokens = [
+  { text: 'Hello', type: 'palabra', id: 'token_0', tokenId: 9906 },
+  { text: ' ', type: 'espacio_en_blanco', id: 'token_1', tokenId: 220 },
+  { text: 'world', type: 'palabra', id: 'token_2', tokenId: 1917 },
+  { text: '!', type: 'punctuation', id: 'token_3', tokenId: 0 }
+];
+
+controller.updateTokenVisualization(tokens);
+// Creates color-coded display with clickable tokens
+```
+
+```javascript Empty State
+const controller = new UIController();
+
+// Show empty state
+controller.updateTokenVisualization([]);
+// Displays: "Escribe algo para ver los tokens..."
+```
+</CodeGroup>
+
+<Tip>
+Click any token in the visualization to scroll to and highlight it in the detailed token list.
+</Tip>
+
+### updateTokensList()
+
+Updates the detailed token list with IDs and types.
+
+```javascript
+updateTokensList(tokens)
+```
+
+<ParamField body="tokens" type="Array<Object>" default="[]">
+Array of token objects
+</ParamField>
+
+**Display includes:**
+- Precision indicator (real tiktoken IDs vs approximate)
+- Token text (escaped for HTML)
+- Sequential number
+- Token type
+- Token ID with precision indicator (= for real, ≈ for approximate)
+
+<CodeGroup>
+```javascript Example
+const controller = new UIController();
+
+const tokens = [
+  { 
+    text: 'Hello', 
+    type: 'palabra', 
+    id: 'token_0', 
+    tokenId: 9906,
+    isApproximate: false 
+  },
+  { 
+    text: 'world', 
+    type: 'palabra', 
+    id: 'token_1', 
+    tokenId: 1917,
+    isApproximate: false 
+  }
+];
+
+controller.updateTokensList(tokens);
+
+// Displays:
+// ✓ IDs Reales de tiktoken - Los números son precisos y reproducibles.
+//
+// "Hello" #1 (palabra) → ID = 9906 (Tiktoken Real)
+// "world" #2 (palabra) → ID = 1917 (Tiktoken Real)
+```
+
+```javascript Approximate IDs
+const tokens = [
+  { 
+    text: 'Hello', 
+    type: 'palabra', 
+    tokenId: 45123,
+    isApproximate: true 
+  }
+];
+
+controller.updateTokensList(tokens);
+
+// Displays:
+// ⚠ IDs Aproximados - tiktoken no disponible. Los números mostrados son estimaciones.
+//
+// "Hello" #1 (palabra) → ID ≈ 45123 (Aproximado)
+```
+</CodeGroup>
+
+### highlightTokenInList()
+
+Highlights a specific token in the detailed list.
+
+```javascript
+highlightTokenInList(tokenId)
+```
+
+<ParamField body="tokenId" type="string" required>
+Token ID to highlight (e.g., "token_0")
+</ParamField>
+
+**Behavior:**
+1. Removes previous highlights
+2. Highlights selected token with primary color
+3. Scrolls token into view (smooth scroll)
+4. Automatically removes highlight after 2 seconds
+
+<CodeGroup>
+```javascript Example
+const controller = new UIController();
+
+// Highlight the third token
+controller.highlightTokenInList('token_2');
+
+// Token scrolls into view and is highlighted for 2 seconds
+```
+</CodeGroup>
+
+### resetVisualizations()
+
+Resets both token visualizations to empty state.
+
+```javascript
+resetVisualizations()
+```
+
+Displays placeholder messages:
+- Token container: "Escribe algo para ver los tokens..."
+- Token list: "Los tokens aparecerán aquí..."
+
+<CodeGroup>
+```javascript Example
+const controller = new UIController();
+
+// Clear all visualizations
+controller.resetVisualizations();
+```
+</CodeGroup>
+
+### showLoading()
+
+Displays loading state during analysis.
+
+```javascript
+showLoading()
+```
+
+Shows "Analizando tokens..." message in the token container.
+
+<CodeGroup>
+```javascript Example
+const controller = new UIController();
+
+// Show loading state
+controller.showLoading();
+
+// Perform analysis...
+await analyzeText();
+
+// Update with results
+controller.updateTokenVisualization(tokens);
+```
+</CodeGroup>
+
+### triggerModelChange()
+
+Manually triggers the model change event.
+
+```javascript
+triggerModelChange()
+```
+
+Calls the `onModelChange` callback if it has been set. Useful for initialization or programmatic model switching.
+
+<CodeGroup>
+```javascript Example
+const controller = new UIController();
+
+controller.setEventHandlers({
+  onModelChange: async () => {
+    console.log('Model changed');
+    await updateAnalysis();
+  }
+});
+
+// Trigger manually
+controller.triggerModelChange();
+```
+</CodeGroup>
+
+### bindKeyboardShortcuts()
+
+Binds keyboard shortcuts for improved UX.
+
+```javascript
+bindKeyboardShortcuts()
+```
+
+**Shortcuts:**
+- **Ctrl+K**: Focus text input
+
+<CodeGroup>
+```javascript Example
+// Already bound automatically in constructor
+// Press Ctrl+K anywhere to focus the input
+```
+</CodeGroup>
+
+<Tip>
+Keyboard shortcuts improve accessibility and power user experience.
+</Tip>
+
+### updateYear()
+
+Updates the copyright year in the footer.
+
+```javascript
+updateYear()
+```
+
+Sets the `#current-year` element to the current year from `Date`.
+
+## Usage Examples
+
+<CodeGroup>
+```javascript Basic Setup
+const controller = new UIController();
+
+// Set event handlers
+controller.setEventHandlers({
+  onTextChange: async () => {
+    const text = controller.getTextInput();
+    const model = controller.getSelectedModel();
+    
+    controller.showLoading();
+    const tokens = await tokenizeText(text, model);
+    controller.updateTokenVisualization(tokens);
+  },
+  
+  onModelChange: async () => {
+    const model = controller.getSelectedModel();
+    controller.updateModelInfo(model, tokenizationService);
+  },
+  
+  onClear: () => {
+    controller.clearTextInput();
+    controller.resetVisualizations();
+  }
+});
+```
+
+```javascript Complete Workflow
+const controller = new UIController();
+const tokenizer = new TokenizationService();
+const calculator = new StatisticsCalculator();
+
+await tokenizer.waitForInitialization();
+
+controller.setEventHandlers({
+  onTextChange: async () => {
+    const text = controller.getTextInput();
+    const modelId = controller.getSelectedModel();
+    
+    if (!text.trim()) {
+      controller.resetVisualizations();
+      return;
+    }
+    
+    controller.showLoading();
+    
+    const tokenResult = await tokenizer.tokenizeText(text, modelId);
+    const stats = calculator.calculateStatistics(text, tokenResult, modelId);
+    
+    controller.updateStatistics(stats);
+    controller.updateTokenVisualization(tokenResult.tokens);
+    controller.updateTokensList(tokenResult.tokens);
+  }
+});
+
+// Trigger initial update
+controller.triggerModelChange();
+```
+
+```javascript Manual Updates
+const controller = new UIController();
+
+// Get current values
+const text = controller.getTextInput();
+const model = controller.getSelectedModel();
+
+console.log('Text:', text);
+console.log('Model:', model);
+
+// Update statistics manually
+controller.updateStatistics({
+  tokenCount: 42,
+  charCount: 156,
+  wordCount: 28,
+  costEstimate: 0.000105
+});
+
+// Update tokens
+controller.updateTokenVisualization([
+  { text: 'Hello', type: 'palabra', id: 'token_0', tokenId: 9906 }
+]);
+```
+</CodeGroup>
+
+## DOM Element IDs
+
+The UIController expects these elements in the HTML:
+
+<AccordionGroup>
+  <Accordion title="Input & Controls" icon="keyboard">
+    - `text-input` - Main textarea for text input
+    - `model-select` - Model selection dropdown
+    - `clear-btn` - Clear button
+  </Accordion>
+  
+  <Accordion title="Statistics Display" icon="chart-simple">
+    - `token-count` - Token count display
+    - `char-count` - Character count display
+    - `word-count` - Word count display
+    - `cost-estimate` - Cost estimate display
+  </Accordion>
+  
+  <Accordion title="Model Information" icon="info">
+    - `selected-model-name` - Model name display
+    - `context-limit` - Context limit display
+    - `tokenization-type` - Tokenizer type display
+    - `cost-per-1k` - Pricing information display
+    - `active-algorithm` - Algorithm description display
+    - `model-details-link` - Link to model documentation
+  </Accordion>
+  
+  <Accordion title="Visualizations" icon="eye">
+    - `tokens-container` - Visual token display area
+    - `tokens-array` - Detailed token list area
+  </Accordion>
+  
+  <Accordion title="Footer" icon="copyright">
+    - `current-year` - Copyright year display
+  </Accordion>
+</AccordionGroup>
+
+## CSS Classes
+
+Tokens are assigned these CSS classes for styling:
+
+<CardGroup cols={3}>
+  <Card title=".token" icon="circle">
+    Base token class
+  </Card>
+  <Card title=".palabra" icon="text">
+    Word token
+  </Card>
+  <Card title=".subword" icon="text-slash">
+    Subword token
+  </Card>
+  <Card title=".number" icon="hashtag">
+    Numeric token
+  </Card>
+  <Card title=".punctuation" icon="circle-dot">
+    Punctuation token
+  </Card>
+  <Card title=".special" icon="asterisk">
+    Special character
+  </Card>
+  <Card title=".espacio_en_blanco" icon="square">
+    Whitespace token
+  </Card>
+  <Card title=".approximate-id" icon="triangle-exclamation">
+    Approximate token ID indicator
+  </Card>
+</CardGroup>
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="TokenAnalyzer" icon="microchip" href="/api/token-analyzer">
+    Main application orchestrator
+  </Card>
+  <Card title="TokenizationService" icon="gear" href="/api/tokenization-service">
+    Tokenization logic
+  </Card>
+  <Card title="StatisticsCalculator" icon="calculator" href="/api/statistics-calculator">
+    Statistics calculations
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/architecture/overview">
+    System architecture overview
+  </Card>
+</CardGroup>

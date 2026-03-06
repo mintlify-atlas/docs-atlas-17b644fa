@@ -1,0 +1,799 @@
+---
+title: 'Understanding Tokenization'
+description: 'Learn how AI models break down text into tokens, different encoding types, and why tokenization matters'
+icon: 'brain'
+---
+
+Tokenization is the fundamental process by which AI language models break down text into smaller units called "tokens." Understanding tokenization is crucial for optimizing costs, managing context windows, and working effectively with AI models.
+
+## What Are Tokens?
+
+<Note>
+  Tokens are the basic units of text that language models process. They can be words, parts of words, or even individual characters.
+</Note>
+
+### Token Examples
+
+<Tabs>
+  <Tab title="English Text">
+    ```plaintext
+    Text: "Hello, world!"
+    
+    Tokens breakdown:
+    1. "Hello"     → token_1 (ID: 9906)
+    2. ","         → token_2 (ID: 11)
+    3. " world"    → token_3 (ID: 1917)  // Note the space
+    4. "!"         → token_4 (ID: 0)
+    
+    Total: 4 tokens for 13 characters
+    Ratio: ~3.25 characters per token
+    ```
+    
+    Common English words are usually single tokens, while spaces often attach to the following word.
+  </Tab>
+  
+  <Tab title="Code">
+    ```javascript
+    // Code snippet
+    const hello = "world";
+    
+    // Tokenization (approximate):
+    1. "const"     → token (keyword)
+    2. " hello"    → token (variable name)
+    3. " ="        → token (operator)
+    4. ' "'        → token (quote)
+    5. "world"     → token (string content)
+    6. '";'        → tokens (quote + semicolon)
+    
+    // Code typically uses MORE tokens than prose
+    // Ratio: ~1.5-2.5 characters per token
+    ```
+  </Tab>
+  
+  <Tab title="Special Characters">
+    ```plaintext
+    Text: "🚀 AI tokenization!"
+    
+    Tokens:
+    1. "🚀"        → multiple tokens (emoji)
+    2. " AI"       → token
+    3. " token"    → token
+    4. "ization"   → token (subword)
+    5. "!"         → token
+    
+    // Emojis and special characters often require
+    // multiple tokens
+    ```
+  </Tab>
+</Tabs>
+
+## Why Tokenization Matters
+
+<CardGroup cols={2}>
+  <Card title="Cost Calculation" icon="dollar-sign">
+    API costs are based on token count, not character count. Understanding tokenization helps estimate and optimize costs.
+    
+    ```javascript
+    // From statistics-calculator.js:58-64
+    calculateCost(tokenCount, modelInfo) {
+      return (tokenCount / 1000000) * modelInfo.inputCost;
+    }
+    ```
+  </Card>
+  
+  <Card title="Context Limits" icon="gauge-high">
+    Models have maximum token limits (context windows). Efficient tokenization means fitting more information in the same context.
+    
+    Example: GPT-4o has 128,000 token limit
+    - Efficient text: ~480,000 characters
+    - Inefficient text: ~200,000 characters
+  </Card>
+  
+  <Card title="Model Performance" icon="rocket">
+    Tokenization affects how models "understand" text. Better tokenization means better comprehension and generation.
+  </Card>
+  
+  <Card title="Cross-Model Comparison" icon="scale-balanced">
+    Different models tokenize differently. The same text may use different token counts across providers.
+    
+    Example: "Hello world"
+    - GPT: 2 tokens
+    - Claude: ~2.2 tokens (10% more)
+    - Llama: ~1.9 tokens (5% fewer)
+  </Card>
+</CardGroup>
+
+## Tokenization Methods
+
+### BPE (Byte Pair Encoding)
+
+<Accordion title="How BPE Works">
+  BPE is the most common tokenization algorithm used by modern language models.
+  
+  **Process:**
+  1. Start with a vocabulary of individual characters
+  2. Find the most frequent pair of adjacent tokens
+  3. Merge that pair into a new token
+  4. Repeat until reaching desired vocabulary size
+  
+  **Example:**
+  ```plaintext
+  Original: "low" "low" "lowest"
+  
+  Step 1: Most frequent pair is "lo"
+  Result: "lo" "w" "lo" "w" "lo" "west"
+  
+  Step 2: Most frequent pair is now "lo" + "w"
+  Result: "low" "low" "low" "est"
+  
+  Step 3: Merge "low" + "est"
+  Result: "low" "low" "lowest"
+  ```
+  
+  This is why common words become single tokens while rare words get split into subwords.
+</Accordion>
+
+### WordPiece
+
+<Accordion title="WordPiece Tokenization">
+  Used by some Google models. Similar to BPE but uses likelihood instead of frequency.
+  
+  **Key Difference:**
+  - BPE: Merge most frequent pairs
+  - WordPiece: Merge pairs that maximize likelihood of training data
+  
+  **Result:**
+  ```plaintext
+  Text: "unhappiness"
+  
+  WordPiece:
+  1. "un"        → prefix token
+  2. "##happi"   → subword (## indicates continuation)
+  3. "##ness"    → suffix token
+  ```
+</Accordion>
+
+### SentencePiece
+
+<Accordion title="SentencePiece Algorithm">
+  Used by Llama, many multilingual models, and some Google models.
+  
+  **Advantages:**
+  - Language agnostic (doesn't require pre-tokenization)
+  - Treats spaces as characters
+  - Works well for languages without spaces
+  
+  **Example:**
+  ```plaintext
+  Text: "Hello world"
+  
+  SentencePiece:
+  1. "▁Hello"    → ▁ represents space
+  2. "▁world"    → each token knows if it starts a word
+  ```
+</Accordion>
+
+## Encoding Types in Tokenizador
+
+### o200k_base (Latest OpenAI)
+
+```javascript
+// From models-config.js:8-10
+const MODEL_ENCODINGS = {
+  'gpt-4o': 'o200k_base',
+  'gpt-4o-mini': 'o200k_base',
+  // ...
+};
+```
+
+<CardGroup cols={2}>
+  <Card title="Used By" icon="robot">
+    - GPT-4o
+    - GPT-4o Mini
+    
+    Latest generation OpenAI models
+  </Card>
+  
+  <Card title="Characteristics" icon="chart-line">
+    - 200,000 token vocabulary
+    - More efficient than cl100k_base
+    - Better handling of code
+    - Improved multilingual support
+  </Card>
+</CardGroup>
+
+<Tip>
+  o200k_base typically produces 10-15% fewer tokens for the same text compared to cl100k_base, resulting in lower costs.
+</Tip>
+
+### cl100k_base (Standard GPT-4)
+
+```javascript
+// From models-config.js:11-18
+const MODEL_ENCODINGS = {
+  'gpt-4': 'cl100k_base',
+  'gpt-4-turbo': 'cl100k_base',
+  'gpt-3.5-turbo': 'cl100k_base',
+  // Also used as approximation for non-OpenAI models
+  'claude-3.5-sonnet': 'cl100k_base',
+  'gemini-1.5-pro': 'cl100k_base',
+  // ...
+};
+```
+
+<CardGroup cols={2}>
+  <Card title="Used By" icon="robot">
+    - GPT-4 (all variants)
+    - GPT-3.5 Turbo
+    - Used as approximation for:
+      - Claude models
+      - Gemini models
+      - Most other providers
+  </Card>
+  
+  <Card title="Characteristics" icon="chart-line">
+    - 100,000 token vocabulary
+    - Industry standard
+    - Well-tested and reliable
+    - Good balance of efficiency
+  </Card>
+</CardGroup>
+
+<Note>
+  **Why Approximation?** Non-OpenAI models use proprietary tokenizers, but cl100k_base provides a close approximation. The `tokenRatio` field adjusts for differences.
+</Note>
+
+### How Tokenizador Handles Encodings
+
+```javascript
+// From tokenization-service.js:98-147
+async tokenizeText(text, modelId) {
+  await this.waitForInitialization();
+  
+  const modelInfo = MODELS_DATA[modelId];
+  let tokenCount = 0;
+  let tokens = [];
+  
+  // Use tiktoken for precise tokenization
+  if (this.isInitialized && this.encoder) {
+    try {
+      // Get real token IDs from tiktoken
+      const encoded = this.encoder.encode(text);
+      tokenCount = encoded.length;
+      
+      // Apply model-specific token ratio
+      if (modelInfo.tokenRatio) {
+        tokenCount = Math.round(tokenCount * modelInfo.tokenRatio);
+      }
+      
+      // Create visual tokens with real IDs
+      tokens = this.createTokensFromEncoding(text, encoded, modelId);
+    } catch (error) {
+      // Fallback tokenization if tiktoken fails
+      return this.fallbackTokenization(text, modelId);
+    }
+  }
+  
+  return { tokens, count: tokenCount };
+}
+```
+
+## Token Ratios Explained
+
+<Accordion title="What is tokenRatio?">
+  The `tokenRatio` field in `models-config.js` adjusts token counts for models that don't use OpenAI's tokenization.
+  
+  ```javascript
+  // Example ratios from models-config.js
+  const ratios = {
+    'GPT models': 1.0,          // Baseline
+    'Claude models': 1.1,       // 10% more tokens
+    'Gemini models': 1.05,      // 5% more tokens
+    'Llama models': 0.95,       // 5% fewer tokens
+    'Qwen models': 0.92,        // 8% fewer tokens
+  };
+  ```
+  
+  **How it's applied:**
+  ```javascript
+  // From tokenization-service.js:122-124
+  if (modelInfo.tokenRatio) {
+    tokenCount = Math.round(tokenCount * modelInfo.tokenRatio);
+  }
+  ```
+</Accordion>
+
+<Tabs>
+  <Tab title="More Efficient (< 1.0)">
+    **Models that use fewer tokens:**
+    
+    | Model Family | Ratio | Difference |
+    |-------------|-------|------------|
+    | Qwen | 0.92 | 8% fewer tokens |
+    | DeepSeek | 0.93 | 7% fewer tokens |
+    | Jamba | 0.94 | 6% fewer tokens |
+    | Llama | 0.95 | 5% fewer tokens |
+    | IBM Granite | 0.96 | 4% fewer tokens |
+    
+    **Impact:** Lower costs and more content in context window.
+    
+    **Example:**
+    ```javascript
+    // 10,000 tokens in GPT-4
+    // = 9,500 tokens in Llama 3.1  (5% savings)
+    // = 9,200 tokens in Qwen 2.5   (8% savings)
+    ```
+  </Tab>
+  
+  <Tab title="Standard (1.0)">
+    **Models matching GPT tokenization:**
+    
+    - All OpenAI models (baseline)
+    - Cohere (0.98 ≈ 1.0)
+    - NVIDIA Nemotron (0.98 ≈ 1.0)
+    - Reka (0.99 ≈ 1.0)
+    
+    These models have similar tokenization efficiency to GPT.
+  </Tab>
+  
+  <Tab title="Less Efficient (> 1.0)">
+    **Models that use more tokens:**
+    
+    | Model Family | Ratio | Difference |
+    |-------------|-------|------------|
+    | xAI Grok | 1.01 | 1% more tokens |
+    | Mistral | 1.02 | 2% more tokens |
+    | Microsoft Phi | 1.03 | 3% more tokens |
+    | Amazon Titan | 1.04 | 4% more tokens |
+    | Google Gemini | 1.05 | 5% more tokens |
+    | Snowflake Arctic | 1.06 | 6% more tokens |
+    | Claude | 1.1 | 10% more tokens |
+    
+    **Impact:** Higher costs and less content in context window.
+    
+    **Example:**
+    ```javascript
+    // 10,000 tokens in GPT-4
+    // = 10,500 tokens in Gemini  (5% increase)
+    // = 11,000 tokens in Claude  (10% increase)
+    ```
+  </Tab>
+</Tabs>
+
+## Token Types and Visualization
+
+### Token Classification
+
+```javascript
+// From tokenization-service.js:176-189
+// Tokens are classified for visual styling
+
+let type = 'palabra';  // Default: word
+
+if (/^\s+$/.test(tokenText)) {
+  type = 'espacio_en_blanco';  // Whitespace
+} else if (/^\d+$/.test(tokenText.trim())) {
+  type = 'number';  // Numeric
+} else if (/^[.,!?;:'"()\[\]{}]+$/.test(tokenText.trim())) {
+  type = 'punctuation';  // Punctuation
+} else if (tokenText.startsWith(' ')) {
+  type = 'palabra_con_espacio';  // Word with leading space
+} else if (tokenText.length <= 2) {
+  type = 'subword';  // Subword token
+}
+```
+
+<CardGroup cols={3}>
+  <Card title="palabra" icon="font">
+    Regular word tokens
+    - Complete words
+    - Word beginnings
+    - Most common type
+  </Card>
+  
+  <Card title="subword" icon="puzzle-piece">
+    Parts of words
+    - Word endings
+    - Middle parts
+    - Rare word components
+  </Card>
+  
+  <Card title="espacio_en_blanco" icon="square">
+    Whitespace tokens
+    - Spaces
+    - Tabs
+    - Line breaks
+  </Card>
+  
+  <Card title="number" icon="hashtag">
+    Numeric tokens
+    - Integers
+    - Digits
+    - Number parts
+  </Card>
+  
+  <Card title="punctuation" icon="period">
+    Punctuation marks
+    - Periods, commas
+    - Quotes
+    - Brackets
+  </Card>
+  
+  <Card title="special" icon="star">
+    Special characters
+    - Symbols
+    - Emoji components
+    - Unicode characters
+  </Card>
+</CardGroup>
+
+## Tokenization Best Practices
+
+<AccordionGroup>
+  <Accordion title="1. Choose Token-Efficient Models">
+    When cost is a concern, select models with lower token ratios:
+    
+    ```javascript
+    // Best value for token efficiency
+    const efficientModels = [
+      'Qwen2.5 72B',      // 0.92 ratio, $0.35/1M
+      'DeepSeek V2.5',    // 0.93 ratio, $0.14/1M
+      'Llama 3.1 8B',     // 0.95 ratio, $0.055/1M
+      'Jamba 1.5 Mini',   // 0.94 ratio, $0.10/1M
+    ];
+    ```
+  </Accordion>
+  
+  <Accordion title="2. Optimize Your Prompts">
+    **Write efficiently:**
+    - Remove unnecessary words
+    - Use common vocabulary (fewer tokens)
+    - Avoid excessive formatting
+    
+    **Example:**
+    ```plaintext
+    Inefficient (23 tokens):
+    "I would really appreciate it if you could please help me understand the concept of tokenization in AI models."
+    
+    Efficient (13 tokens):
+    "Explain tokenization in AI models."
+    
+    43% token reduction!
+    ```
+  </Accordion>
+  
+  <Accordion title="3. Monitor Context Usage">
+    Use Tokenizador to track context utilization:
+    
+    ```javascript
+    // From statistics-calculator.js:72-74
+    calculateContextUtilization(tokenCount, contextLimit) {
+      return contextLimit > 0 
+        ? Math.min((tokenCount / contextLimit) * 100, 100) 
+        : 0;
+    }
+    ```
+    
+    **Guidelines:**
+    - < 75%: Safe zone
+    - 75-90%: Monitor closely
+    - 90-100%: Optimize or switch models
+    - > 100%: Content will be truncated
+  </Accordion>
+  
+  <Accordion title="4. Test Across Models">
+    The same text can have very different token counts:
+    
+    ```javascript
+    // Example for 10,000 character text
+    const tokenComparison = {
+      'GPT-4o': 2500,        // Baseline
+      'Claude 3.5': 2750,    // 10% more = $0.000825 (vs $0.00625)
+      'Llama 3.1': 2375,     // 5% less = $0.000831
+      'Qwen 2.5': 2300,      // 8% less = $0.000805
+    };
+    ```
+    
+    Test your actual workload to find the best model.
+  </Accordion>
+  
+  <Accordion title="5. Understand Language Differences">
+    Tokenization efficiency varies by language:
+    
+    ```plaintext
+    "Hello world" (English):
+    - GPT: 2 tokens
+    - Ratio: 1.0
+    
+    "你好世界" (Chinese):
+    - GPT: 4-6 tokens
+    - Ratio: 2-3x less efficient
+    
+    Best models for non-English:
+    - Qwen (optimized for Chinese)
+    - Gemini (strong multilingual)
+    - Command R (good for many languages)
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Real-World Examples
+
+### Example 1: API Documentation
+
+<Tabs>
+  <Tab title="Input">
+    ```javascript
+    // API endpoint documentation
+    /**
+     * Authenticates user and returns JWT token
+     * @param {string} email - User email address
+     * @param {string} password - User password
+     * @returns {Promise<string>} JWT token
+     */
+    async function authenticate(email, password) {
+      // Implementation here
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Tokenization">
+    **Analysis:**
+    - Characters: 267
+    - GPT-4o tokens: ~95 tokens
+    - Claude 3.5 tokens: ~105 tokens (+10%)
+    - Llama 3.1 tokens: ~90 tokens (-5%)
+    
+    **Cost comparison (per 1M similar docs):**
+    - GPT-4o: $0.2375
+    - Claude 3.5: $0.315 (33% more expensive)
+    - Llama 3.1: $0.0315 (87% cheaper)
+    
+    **Best choice:** Llama 3.1 70B for bulk documentation
+  </Tab>
+</Tabs>
+
+### Example 2: Customer Support Message
+
+<Tabs>
+  <Tab title="Input">
+    ```plaintext
+    Hi, I'm having trouble logging into my account. I've tried resetting my password twice but I'm not receiving the reset emails. Can you help me?
+    ```
+  </Tab>
+  
+  <Tab title="Tokenization">
+    **Analysis:**
+    - Characters: 153
+    - Words: 28
+    - GPT-4o tokens: 32 tokens
+    - Ratio: 1.14 tokens per word
+    
+    **Context consideration:**
+    - Single message: negligible cost
+    - With full conversation history: can add up
+    - Monitor context at ~50+ exchanges
+    
+    **Cost per 1M messages:**
+    - GPT-4o: $0.08
+    - GPT-4o Mini: $0.0048 (94% cheaper)
+    - Gemini Flash: $0.0024 (97% cheaper)
+    
+    **Best choice:** GPT-4o Mini or Gemini Flash for high-volume support
+  </Tab>
+</Tabs>
+
+### Example 3: Long-Form Content
+
+<Tabs>
+  <Tab title="Input">
+    ```plaintext
+    [10,000 word article on AI trends]
+    
+    Assumptions:
+    - 10,000 words
+    - ~50,000 characters
+    - Technical content with some code
+    ```
+  </Tab>
+  
+  <Tab title="Tokenization">
+    **Analysis:**
+    - GPT-4o: ~13,000 tokens
+    - Claude 3.5: ~14,300 tokens
+    - Qwen 2.5: ~12,000 tokens
+    
+    **Cost per article:**
+    - GPT-4o: $0.0325
+    - Claude 3.5: $0.0429 (+32%)
+    - Qwen 2.5: $0.0042 (-87%)
+    
+    **Context fit:**
+    - GPT-4o (128K): Can fit ~9 articles
+    - Claude 3.5 (200K): Can fit ~14 articles
+    - Gemini 1.5 Pro (2M): Can fit ~150 articles
+    
+    **Best choice:** Depends on use case
+    - Single article analysis: Qwen 2.5
+    - Multi-document: Gemini 1.5 Pro
+    - High accuracy: Claude 3.5 Sonnet
+  </Tab>
+</Tabs>
+
+## Advanced Topics
+
+### Tiktoken Library
+
+<Accordion title="How Tokenizador Uses Tiktoken">
+  Tokenizador uses the official OpenAI tiktoken library for precise tokenization:
+  
+  ```javascript
+  // From tokenization-service.js:17-82
+  async initializeTokenizer() {
+    // Wait for tiktoken to load
+    let tiktokenLib = null;
+    
+    if (typeof tiktoken !== 'undefined') {
+      tiktokenLib = tiktoken;
+    } else if (typeof window !== 'undefined' && window.tiktoken) {
+      tiktokenLib = window.tiktoken;
+    }
+    
+    if (tiktokenLib && typeof tiktokenLib.get_encoding === 'function') {
+      // Initialize with cl100k_base encoding
+      this.encoder = tiktokenLib.get_encoding('cl100k_base');
+      this.isInitialized = true;
+    }
+  }
+  ```
+  
+  **Fallback mechanism:**
+  ```javascript
+  // From index.html:86-136
+  window.tiktoken = {
+    get_encoding: function(encoding) {
+      return {
+        encode: function(text) {
+          // Estimation based on word splitting
+          // Not as precise but provides useful approximation
+        }
+      };
+    }
+  };
+  ```
+</Accordion>
+
+### Token ID Structure
+
+<Accordion title="Understanding Token IDs">
+  Each token has a unique numerical ID in the vocabulary:
+  
+  ```javascript
+  // Example token object from tokenization-service.js:191-199
+  {
+    text: "Hello",           // The actual text
+    type: "palabra",         // Token type for styling
+    id: "token_0",           // Internal UI identifier
+    tokenId: 9906,           // Real tiktoken vocabulary ID
+    index: 0,                // Position in sequence
+    isApproximate: false     // Real ID vs estimated
+  }
+  ```
+  
+  **Common token IDs:**
+  - 0-255: Single byte tokens
+  - 256-50,000: Common words and subwords
+  - 50,000-100,000: Less common combinations
+  
+  **Why IDs matter:**
+  - Models process IDs, not text
+  - Same ID = same meaning to the model
+  - Different text can have same ID (homonyms)
+</Accordion>
+
+### Fallback Tokenization
+
+<Accordion title="When Tiktoken Isn't Available">
+  If tiktoken fails to load, Tokenizador uses a sophisticated fallback:
+  
+  ```javascript
+  // From tokenization-service.js:348-412
+  splitWordIntoTokens(word, startIndex) {
+    // Short words: single token
+    if (word.length <= 3) {
+      return [createToken(word)];
+    }
+    
+    // Calculate target tokens
+    // ~2.8 characters per token (empirically derived)
+    const avgCharsPerToken = 2.8;
+    const targetTokens = Math.ceil(word.length / avgCharsPerToken);
+    
+    // Split word proportionally
+    // Creates deterministic token IDs via hashing
+  }
+  ```
+  
+  **Accuracy:**
+  - Token counts: 95-98% accurate
+  - Token IDs: Approximate (deterministic but not real)
+  - Visual split: Close approximation
+  
+  Marked with `isApproximate: true` for transparency.
+</Accordion>
+
+## Common Questions
+
+<AccordionGroup>
+  <Accordion title="Why do different models have different token counts?">
+    Each model uses its own tokenizer trained on its training data:
+    
+    - **OpenAI:** Optimized for English and code
+    - **Anthropic:** Different vocabulary, more tokens
+    - **Meta (Llama):** SentencePiece, slightly more efficient
+    - **Google:** Multilingual focus, different tradeoffs
+    
+    The `tokenRatio` field adjusts for these differences.
+  </Accordion>
+  
+  <Accordion title="Does tokenization affect model quality?">
+    Yes, tokenization impacts:
+    
+    1. **Understanding:** Better tokenization = better comprehension
+    2. **Generation:** Affects output fluency
+    3. **Efficiency:** More tokens = slower processing
+    4. **Cost:** Directly determines API costs
+    
+    Modern models have excellent tokenizers, so quality differences are minimal.
+  </Accordion>
+  
+  <Accordion title="Can I customize tokenization?">
+    No, tokenization is fixed per model. However, you can:
+    
+    1. **Choose models** with better tokenization for your use case
+    2. **Optimize prompts** to reduce tokens
+    3. **Format text** efficiently (remove extra spaces, etc.)
+    4. **Select language-specific models** for non-English text
+  </Accordion>
+  
+  <Accordion title="What's the difference between tokens and words?">
+    **Tokens** are algorithmic units, **words** are linguistic units:
+    
+    ```plaintext
+    Sentence: "The tokenization process."
+    
+    Words: ["The", "tokenization", "process", "."]
+    Count: 4 words
+    
+    Tokens: ["The", " token", "ization", " process", "."]
+    Count: 5 tokens
+    
+    Why different?
+    - "tokenization" split into subwords
+    - Spaces attach to following word
+    - Punctuation separate
+    ```
+    
+    Typical ratio: 1.3-1.5 tokens per word in English.
+  </Accordion>
+</AccordionGroup>
+
+## Further Reading
+
+<CardGroup cols={2}>
+  <Card title="How to Use" icon="book-open" href="/guides/how-to-use">
+    Practical guide to using Tokenizador
+  </Card>
+  
+  <Card title="Supported Models" icon="robot" href="/guides/supported-models">
+    Complete model list with specifications
+  </Card>
+  
+  <Card title="Cost Estimation" icon="calculator" href="/guides/cost-estimation">
+    Understanding and optimizing costs
+  </Card>
+  
+  <Card title="Tiktoken Repository" icon="github" href="https://github.com/openai/tiktoken">
+    Official tokenization library
+  </Card>
+</CardGroup>

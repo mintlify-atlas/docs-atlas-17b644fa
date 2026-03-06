@@ -1,0 +1,746 @@
+---
+title: "StatisticsCalculator"
+description: "Calculates comprehensive statistics including token counts, costs, and efficiency metrics"
+icon: "calculator"
+---
+
+## Overview
+
+The `StatisticsCalculator` class provides comprehensive statistical analysis for tokenized text. It calculates token counts, character counts, word counts, cost estimates, context utilization, and provides model comparison capabilities.
+
+<Info>
+This calculator works with data from 67+ AI models and provides accurate cost estimates based on current pricing.
+</Info>
+
+## Constructor
+
+Creates a new StatisticsCalculator instance.
+
+```javascript
+const calculator = new StatisticsCalculator();
+```
+
+The calculator is stateless and can be reused for multiple calculations.
+
+## Methods
+
+### calculateStatistics()
+
+Calculates comprehensive statistics for the given text and model.
+
+```javascript
+calculateStatistics(text, tokenResult, modelId)
+```
+
+<ParamField body="text" type="string" required>
+The original input text
+</ParamField>
+
+<ParamField body="tokenResult" type="Object" required>
+Result object from TokenizationService.tokenizeText()
+</ParamField>
+
+<ParamField body="modelId" type="string" required>
+Model identifier (e.g., "gpt-4o", "claude-3.5-sonnet")
+</ParamField>
+
+<ParamField body="returns" type="Object">
+Comprehensive statistics object
+</ParamField>
+
+**Return value structure:**
+
+<ResponseField name="tokenCount" type="number">
+Total number of tokens
+</ResponseField>
+
+<ResponseField name="charCount" type="number">
+Total number of characters
+</ResponseField>
+
+<ResponseField name="wordCount" type="number">
+Total number of words
+</ResponseField>
+
+<ResponseField name="costEstimate" type="number">
+Estimated cost in USD for input tokens
+</ResponseField>
+
+<ResponseField name="contextUtilization" type="number">
+Percentage of context window used (0-100)
+</ResponseField>
+
+<ResponseField name="tokensPerWord" type="number">
+Average tokens per word ratio
+</ResponseField>
+
+<ResponseField name="inputCostPer1M" type="number">
+Cost per 1M input tokens in USD
+</ResponseField>
+
+<ResponseField name="outputCostPer1M" type="number">
+Cost per 1M output tokens in USD
+</ResponseField>
+
+<CodeGroup>
+```javascript Basic Usage
+const calculator = new StatisticsCalculator();
+const tokenizer = new TokenizationService();
+
+const text = "Hello world! This is a test.";
+const tokenResult = await tokenizer.tokenizeText(text, 'gpt-4o');
+
+const stats = calculator.calculateStatistics(text, tokenResult, 'gpt-4o');
+
+console.log(stats);
+// {
+//   tokenCount: 8,
+//   charCount: 29,
+//   wordCount: 6,
+//   costEstimate: 0.00002,
+//   contextUtilization: 0.00625,
+//   tokensPerWord: 1.33,
+//   inputCostPer1M: 2.50,
+//   outputCostPer1M: 10.00
+// }
+```
+
+```javascript Multiple Models
+const calculator = new StatisticsCalculator();
+const tokenizer = new TokenizationService();
+
+const text = "Your long text here...";
+
+const models = ['gpt-4o', 'claude-3.5-sonnet', 'llama-3.1-70b'];
+
+for (const model of models) {
+  const tokenResult = await tokenizer.tokenizeText(text, model);
+  const stats = calculator.calculateStatistics(text, tokenResult, model);
+  
+  console.log(`${model}: ${stats.tokenCount} tokens, $${stats.costEstimate}`);
+}
+```
+</CodeGroup>
+
+### countWords()
+
+Counts words in text using intelligent word boundary detection.
+
+```javascript
+countWords(text)
+```
+
+<ParamField body="text" type="string" required>
+Text to analyze
+</ParamField>
+
+<ParamField body="returns" type="number">
+Number of words (0 for empty text)
+</ParamField>
+
+**Algorithm:**
+1. Trims whitespace from text
+2. Splits on whitespace characters (`\s+`)
+3. Filters out empty strings
+4. Returns count
+
+<CodeGroup>
+```javascript Examples
+const calculator = new StatisticsCalculator();
+
+console.log(calculator.countWords('Hello world'));
+// 2
+
+console.log(calculator.countWords('  Multiple   spaces   between  '));
+// 3
+
+console.log(calculator.countWords(''));
+// 0
+
+console.log(calculator.countWords('One-hyphenated-word'));
+// 1
+```
+</CodeGroup>
+
+### calculateCost()
+
+Calculates estimated cost based on token count and model pricing.
+
+```javascript
+calculateCost(tokenCount, modelInfo)
+```
+
+<ParamField body="tokenCount" type="number" required>
+Number of tokens
+</ParamField>
+
+<ParamField body="modelInfo" type="Object" required>
+Model information object from MODELS_DATA
+</ParamField>
+
+<ParamField body="returns" type="number">
+Estimated cost in USD
+</ParamField>
+
+**Cost calculation formula:**
+```
+cost = (tokenCount / 1,000,000) × inputCostPer1M
+```
+
+<CodeGroup>
+```javascript Examples
+const calculator = new StatisticsCalculator();
+const modelInfo = MODELS_DATA['gpt-4o'];
+
+// Calculate cost for 1,000 tokens
+const cost1k = calculator.calculateCost(1000, modelInfo);
+console.log(`1K tokens: $${cost1k.toFixed(6)}`);
+// 1K tokens: $0.002500
+
+// Calculate cost for 1,000,000 tokens
+const cost1m = calculator.calculateCost(1000000, modelInfo);
+console.log(`1M tokens: $${cost1m.toFixed(2)}`);
+// 1M tokens: $2.50
+```
+</CodeGroup>
+
+<Note>
+Cost estimates are based on input token pricing. Output tokens typically cost more.
+</Note>
+
+### calculateContextUtilization()
+
+Calculates the percentage of the model's context window being used.
+
+```javascript
+calculateContextUtilization(tokenCount, contextLimit)
+```
+
+<ParamField body="tokenCount" type="number" required>
+Number of tokens in the text
+</ParamField>
+
+<ParamField body="contextLimit" type="number" required>
+Maximum context window size for the model
+</ParamField>
+
+<ParamField body="returns" type="number">
+Percentage from 0 to 100 (capped at 100)
+</ParamField>
+
+<CodeGroup>
+```javascript Examples
+const calculator = new StatisticsCalculator();
+
+// GPT-4o has 128K context
+console.log(calculator.calculateContextUtilization(1000, 128000));
+// 0.78 (less than 1%)
+
+console.log(calculator.calculateContextUtilization(64000, 128000));
+// 50.0 (half the context)
+
+console.log(calculator.calculateContextUtilization(128000, 128000));
+// 100.0 (full context)
+
+console.log(calculator.calculateContextUtilization(150000, 128000));
+// 100.0 (capped at 100%, actually exceeds)
+```
+</CodeGroup>
+
+### exceedsContextLimit()
+
+Checks if token count exceeds the model's context limit.
+
+```javascript
+exceedsContextLimit(tokenCount, modelId)
+```
+
+<ParamField body="tokenCount" type="number" required>
+Number of tokens
+</ParamField>
+
+<ParamField body="modelId" type="string" required>
+Model identifier
+</ParamField>
+
+<ParamField body="returns" type="boolean">
+True if exceeds limit, false otherwise
+</ParamField>
+
+<CodeGroup>
+```javascript Examples
+const calculator = new StatisticsCalculator();
+
+// GPT-4o has 128K context limit
+console.log(calculator.exceedsContextLimit(100000, 'gpt-4o'));
+// false
+
+console.log(calculator.exceedsContextLimit(150000, 'gpt-4o'));
+// true
+
+// GPT-3.5 has 16K context limit
+console.log(calculator.exceedsContextLimit(20000, 'gpt-3.5-turbo'));
+// true
+```
+</CodeGroup>
+
+### getContextWarning()
+
+Returns a warning message if context usage is high or exceeded.
+
+```javascript
+getContextWarning(tokenCount, modelId)
+```
+
+<ParamField body="tokenCount" type="number" required>
+Number of tokens
+</ParamField>
+
+<ParamField body="modelId" type="string" required>
+Model identifier
+</ParamField>
+
+<ParamField body="returns" type="string|null">
+Warning message or null if no warning needed
+</ParamField>
+
+**Warning thresholds:**
+
+<Tabs>
+  <Tab title="100%+ (Exceeded)">
+    ```javascript
+    "⚠️ Texto excede el límite de contexto del modelo (128,000 tokens)"
+    ```
+    Text exceeds the model's maximum context window.
+  </Tab>
+  <Tab title="90-99% (Near Limit)">
+    ```javascript
+    "⚠️ Cerca del límite de contexto (95.5% utilizado)"
+    ```
+    Approaching the context limit, may cause issues.
+  </Tab>
+  <Tab title="75-89% (High Usage)">
+    ```javascript
+    "ℹ️ Alto uso del contexto (82.3% utilizado)"
+    ```
+    High context usage, consider splitting text.
+  </Tab>
+  <Tab title="Under 75% (No Warning)">
+    ```javascript
+    null
+    ```
+    Context usage is acceptable, no warning needed.
+  </Tab>
+</Tabs>
+
+<CodeGroup>
+```javascript Examples
+const calculator = new StatisticsCalculator();
+
+// GPT-4o: 128K context
+console.log(calculator.getContextWarning(50000, 'gpt-4o'));
+// null (39% usage)
+
+console.log(calculator.getContextWarning(100000, 'gpt-4o'));
+// "ℹ️ Alto uso del contexto (78.1% utilizado)"
+
+console.log(calculator.getContextWarning(120000, 'gpt-4o'));
+// "⚠️ Cerca del límite de contexto (93.8% utilizado)"
+
+console.log(calculator.getContextWarning(150000, 'gpt-4o'));
+// "⚠️ Texto excede el límite de contexto del modelo (128,000 tokens)"
+```
+</CodeGroup>
+
+### formatStatistics()
+
+Formats statistics for display with proper localization and units.
+
+```javascript
+formatStatistics(stats)
+```
+
+<ParamField body="stats" type="Object" required>
+Raw statistics object from calculateStatistics()
+</ParamField>
+
+<ParamField body="returns" type="Object">
+Formatted statistics with string values
+</ParamField>
+
+<CodeGroup>
+```javascript Example
+const calculator = new StatisticsCalculator();
+
+const rawStats = {
+  tokenCount: 15847,
+  charCount: 72456,
+  wordCount: 11234,
+  costEstimate: 0.03961175,
+  contextUtilization: 12.380469,
+  tokensPerWord: 1.410987,
+  inputCostPer1M: 2.50,
+  outputCostPer1M: 10.00
+};
+
+const formatted = calculator.formatStatistics(rawStats);
+
+console.log(formatted);
+// {
+//   tokenCount: "15,847",
+//   charCount: "72,456",
+//   wordCount: "11,234",
+//   costEstimate: "$0.039612",
+//   contextUtilization: "12.4%",
+//   tokensPerWord: "1.41",
+//   inputCostPer1M: "$2.50/1M",
+//   outputCostPer1M: "$10.00/1M"
+// }
+```
+</CodeGroup>
+
+<Tip>
+Use formatted statistics for displaying in UI. They include proper thousand separators, currency symbols, and percentage signs.
+</Tip>
+
+### compareModels()
+
+Compares tokenization statistics across multiple models.
+
+```javascript
+async compareModels(text, modelIds, tokenizationService)
+```
+
+<ParamField body="text" type="string" required>
+Text to analyze
+</ParamField>
+
+<ParamField body="modelIds" type="string[]" required>
+Array of model IDs to compare
+</ParamField>
+
+<ParamField body="tokenizationService" type="TokenizationService" required>
+Tokenization service instance
+</ParamField>
+
+<ParamField body="returns" type="Promise<Array>">
+Array of comparison objects sorted by cost (cheapest first)
+</ParamField>
+
+**Comparison object structure:**
+
+<ResponseField name="modelId" type="string">
+Model identifier
+</ResponseField>
+
+<ResponseField name="company" type="string">
+Model provider (e.g., "OpenAI", "Anthropic")
+</ResponseField>
+
+<ResponseField name="stats" type="Object">
+Raw statistics object
+</ResponseField>
+
+<ResponseField name="formatted" type="Object">
+Formatted statistics for display
+</ResponseField>
+
+<CodeGroup>
+```javascript Basic Comparison
+const calculator = new StatisticsCalculator();
+const tokenizer = new TokenizationService();
+await tokenizer.waitForInitialization();
+
+const text = "Long text for comparison...";
+
+const comparison = await calculator.compareModels(
+  text,
+  ['gpt-4o', 'claude-3.5-sonnet', 'llama-3.1-70b'],
+  tokenizer
+);
+
+comparison.forEach(result => {
+  console.log(`${result.modelId} (${result.company}):`);
+  console.log(`  Tokens: ${result.formatted.tokenCount}`);
+  console.log(`  Cost: ${result.formatted.costEstimate}`);
+});
+```
+
+```javascript Cost Optimization
+const calculator = new StatisticsCalculator();
+const tokenizer = new TokenizationService();
+
+const text = "Your text here...";
+
+// Compare all major models
+const comparison = await calculator.compareModels(
+  text,
+  [
+    'gpt-4o',
+    'gpt-4o-mini',
+    'claude-3.5-sonnet',
+    'claude-3-haiku',
+    'llama-3.1-70b',
+    'gemini-1.5-pro'
+  ],
+  tokenizer
+);
+
+// Results are sorted by cost (cheapest first)
+console.log('Most cost-effective:', comparison[0].modelId);
+console.log('Cost:', comparison[0].formatted.costEstimate);
+console.log('Tokens:', comparison[0].formatted.tokenCount);
+```
+</CodeGroup>
+
+<Note>
+Comparison results are automatically sorted by cost estimate, making it easy to find the most economical model for your text.
+</Note>
+
+### getEfficiencyMetrics()
+
+Calculates efficiency metrics for tokenization analysis.
+
+```javascript
+getEfficiencyMetrics(stats)
+```
+
+<ParamField body="stats" type="Object" required>
+Statistics object from calculateStatistics()
+</ParamField>
+
+<ParamField body="returns" type="Object">
+Efficiency metrics object
+</ParamField>
+
+**Return value structure:**
+
+<ResponseField name="costEfficiency" type="number">
+Cost per thousand tokens (lower is better)
+</ResponseField>
+
+<ResponseField name="compressionRatio" type="number">
+Tokens per character (lower = better compression)
+</ResponseField>
+
+<ResponseField name="verbosityIndex" type="number">
+Tokens per word (lower = more efficient encoding)
+</ResponseField>
+
+<CodeGroup>
+```javascript Example
+const calculator = new StatisticsCalculator();
+
+const stats = {
+  tokenCount: 1000,
+  charCount: 4500,
+  wordCount: 750,
+  costEstimate: 0.0025
+};
+
+const metrics = calculator.getEfficiencyMetrics(stats);
+
+console.log(metrics);
+// {
+//   costEfficiency: 2.5,        // $2.50 per 1000 tokens
+//   compressionRatio: 0.222,    // 0.22 tokens per character
+//   verbosityIndex: 1.333       // 1.33 tokens per word
+// }
+```
+
+```javascript Model Efficiency Comparison
+const calculator = new StatisticsCalculator();
+const tokenizer = new TokenizationService();
+
+const text = "Sample text for efficiency analysis...";
+
+const models = ['gpt-4o', 'claude-3.5-sonnet'];
+
+for (const model of models) {
+  const tokenResult = await tokenizer.tokenizeText(text, model);
+  const stats = calculator.calculateStatistics(text, tokenResult, model);
+  const efficiency = calculator.getEfficiencyMetrics(stats);
+  
+  console.log(`${model}:`);
+  console.log(`  Cost Efficiency: $${efficiency.costEfficiency.toFixed(3)}/1K`);
+  console.log(`  Compression: ${efficiency.compressionRatio.toFixed(3)} tokens/char`);
+  console.log(`  Verbosity: ${efficiency.verbosityIndex.toFixed(3)} tokens/word`);
+}
+```
+</CodeGroup>
+
+## Usage Examples
+
+<CodeGroup>
+```javascript Complete Analysis
+const calculator = new StatisticsCalculator();
+const tokenizer = new TokenizationService();
+await tokenizer.waitForInitialization();
+
+const text = `
+  This is a sample text for comprehensive tokenization analysis.
+  We'll analyze tokens, costs, and efficiency metrics.
+`;
+
+const modelId = 'gpt-4o';
+
+// Tokenize
+const tokenResult = await tokenizer.tokenizeText(text, modelId);
+
+// Calculate statistics
+const stats = calculator.calculateStatistics(text, tokenResult, modelId);
+
+// Get formatted display values
+const formatted = calculator.formatStatistics(stats);
+
+// Check for warnings
+const warning = calculator.getContextWarning(stats.tokenCount, modelId);
+
+// Get efficiency metrics
+const efficiency = calculator.getEfficiencyMetrics(stats);
+
+console.log('Statistics:', formatted);
+if (warning) console.log('Warning:', warning);
+console.log('Efficiency:', efficiency);
+```
+
+```javascript Cost Budgeting
+const calculator = new StatisticsCalculator();
+const tokenizer = new TokenizationService();
+
+const budget = 1.00; // $1 USD budget
+const text = "Your content here...";
+
+const models = ['gpt-4o', 'claude-3.5-sonnet', 'llama-3.1-70b'];
+
+for (const model of models) {
+  const tokenResult = await tokenizer.tokenizeText(text, model);
+  const stats = calculator.calculateStatistics(text, tokenResult, model);
+  
+  if (stats.costEstimate <= budget) {
+    console.log(`✓ ${model}: $${stats.costEstimate.toFixed(6)} (within budget)`);
+  } else {
+    console.log(`✗ ${model}: $${stats.costEstimate.toFixed(6)} (exceeds budget)`);
+  }
+}
+```
+
+```javascript Context Management
+const calculator = new StatisticsCalculator();
+const tokenizer = new TokenizationService();
+
+const longText = "...very long text...";
+const modelId = 'gpt-4o';
+
+const tokenResult = await tokenizer.tokenizeText(longText, modelId);
+const stats = calculator.calculateStatistics(longText, tokenResult, modelId);
+
+const utilization = stats.contextUtilization;
+const warning = calculator.getContextWarning(stats.tokenCount, modelId);
+
+if (utilization >= 90) {
+  console.log('⚠️ High context usage! Consider splitting text.');
+  console.log(warning);
+} else if (utilization >= 75) {
+  console.log('ℹ️ Context usage is getting high.');
+  console.log(warning);
+} else {
+  console.log(`✓ Context usage: ${utilization.toFixed(1)}%`);
+}
+```
+</CodeGroup>
+
+## Statistics Interpretation
+
+<AccordionGroup>
+  <Accordion title="Token Count" icon="hashtag">
+    The total number of tokens the text is divided into. This directly impacts:
+    - API costs (priced per token)
+    - Processing time
+    - Context window usage
+    
+    **Typical ranges:**
+    - Short prompt: 10-100 tokens
+    - Medium text: 100-1,000 tokens
+    - Long document: 1,000-10,000+ tokens
+  </Accordion>
+  
+  <Accordion title="Character Count" icon="font">
+    Total number of characters including spaces and punctuation.
+    
+    **Rule of thumb:** English text averages ~4 characters per token.
+  </Accordion>
+  
+  <Accordion title="Word Count" icon="text">
+    Number of words (whitespace-separated).
+    
+    **Rule of thumb:** English text averages ~0.75 tokens per word.
+  </Accordion>
+  
+  <Accordion title="Cost Estimate" icon="dollar-sign">
+    Estimated API cost for processing the text.
+    
+    **Note:** Based on input pricing. Output tokens cost more.
+    
+    **Cost ranges (GPT-4o):**
+    - 1K tokens: ~$0.0025
+    - 10K tokens: ~$0.025
+    - 100K tokens: ~$0.25
+  </Accordion>
+  
+  <Accordion title="Context Utilization" icon="percent">
+    Percentage of the model's context window being used.
+    
+    **Guidelines:**
+    - Less than 50%: Comfortable usage
+    - 50-75%: Moderate usage
+    - 75-90%: High usage
+    - 90-100%: Near limit
+    - Greater than 100%: Exceeds limit (will fail)
+  </Accordion>
+  
+  <Accordion title="Tokens Per Word" icon="divide">
+    Average number of tokens per word.
+    
+    **Typical values:**
+    - English: 1.3-1.5
+    - Code: 1.5-2.0
+    - Non-English: varies by language
+    
+    Lower values indicate more efficient tokenization.
+  </Accordion>
+</AccordionGroup>
+
+## Cost Optimization Tips
+
+<CardGroup cols={2}>
+  <Card title="Choose Efficient Models" icon="bolt">
+    Compare models to find the best token-to-cost ratio for your use case
+  </Card>
+  <Card title="Minimize Prompt Length" icon="compress">
+    Remove unnecessary context and instructions to reduce token count
+  </Card>
+  <Card title="Use Smaller Models" icon="microchip">
+    Consider mini variants (e.g., gpt-4o-mini) for simpler tasks
+  </Card>
+  <Card title="Batch Requests" icon="layer-group">
+    Process multiple items in one request to reduce per-request overhead
+  </Card>
+</CardGroup>
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="TokenAnalyzer" icon="microchip" href="/api/token-analyzer">
+    Main application orchestrator
+  </Card>
+  <Card title="TokenizationService" icon="gear" href="/api/tokenization-service">
+    Tokenization engine
+  </Card>
+  <Card title="UIController" icon="browser" href="/api/ui-controller">
+    UI management
+  </Card>
+  <Card title="Supported Models" icon="list" href="/guides/supported-models">
+    View all model pricing
+  </Card>
+</CardGroup>

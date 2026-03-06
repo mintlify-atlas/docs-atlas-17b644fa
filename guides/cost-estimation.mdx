@@ -1,0 +1,992 @@
+---
+title: 'Cost Estimation'
+description: 'Learn how AI model costs are calculated, understand input vs output pricing, and optimize your spending'
+icon: 'calculator'
+---
+
+Understanding how AI API costs work is essential for budgeting and optimization. This guide explains Tokenizador's cost calculation system and provides strategies for minimizing expenses.
+
+## How Costs Are Calculated
+
+<Note>
+  AI model costs are based on **token count**, not character count or request count. Different models have different prices per million tokens.
+</Note>
+
+### Basic Cost Formula
+
+```javascript
+// From statistics-calculator.js:58-64
+calculateCost(tokenCount, modelInfo) {
+  if (!modelInfo || !modelInfo.inputCost) {
+    return 0;
+  }
+  // Calculate cost based on input tokens (cost per 1M tokens)
+  return (tokenCount / 1000000) * modelInfo.inputCost;
+}
+```
+
+<CardGroup cols={2}>
+  <Card title="Input Formula" icon="arrow-right">
+    ```plaintext
+    Cost = (Token Count / 1,000,000) × Input Price
+    
+    Example (GPT-4o):
+    1,000 tokens = (1000 / 1000000) × $2.50
+                 = $0.0025
+    ```
+  </Card>
+  
+  <Card title="Output Formula" icon="arrow-left">
+    ```plaintext
+    Cost = (Token Count / 1,000,000) × Output Price
+    
+    Example (GPT-4o):
+    1,000 tokens = (1000 / 1000000) × $10.00
+                 = $0.01
+    ```
+  </Card>
+</CardGroup>
+
+## Input vs Output Costs
+
+<Warning>
+  Output tokens are typically **2-5x more expensive** than input tokens. This is crucial for cost optimization.
+</Warning>
+
+### Price Comparison Across Models
+
+<Tabs>
+  <Tab title="OpenAI">
+    | Model | Input (per 1M) | Output (per 1M) | Ratio |
+    |-------|----------------|-----------------|-------|
+    | GPT-4o | $2.50 | $10.00 | 4.0x |
+    | GPT-4o Mini | $0.15 | $0.60 | 4.0x |
+    | GPT-4 Turbo | $10.00 | $30.00 | 3.0x |
+    | GPT-4 | $30.00 | $60.00 | 2.0x |
+    | GPT-3.5 Turbo | $0.50 | $1.50 | 3.0x |
+    
+    ```javascript
+    // From models-config.js:88-89
+    inputCost: 2.50,
+    outputCost: 10.00
+    ```
+  </Tab>
+  
+  <Tab title="Anthropic">
+    | Model | Input (per 1M) | Output (per 1M) | Ratio |
+    |-------|----------------|-----------------|-------|
+    | Claude 3.5 Sonnet | $3.00 | $15.00 | 5.0x |
+    | Claude 3 Opus | $15.00 | $75.00 | 5.0x |
+    | Claude 3 Sonnet | $3.00 | $15.00 | 5.0x |
+    | Claude 3 Haiku | $0.25 | $1.25 | 5.0x |
+    
+    <Note>
+      Claude models have the highest output multiplier (5x) among major providers.
+    </Note>
+  </Tab>
+  
+  <Tab title="Google">
+    | Model | Input (per 1M) | Output (per 1M) | Ratio |
+    |-------|----------------|-----------------|-------|
+    | Gemini 1.5 Pro | $1.25 | $5.00 | 4.0x |
+    | Gemini 1.5 Flash | $0.075 | $0.30 | 4.0x |
+    
+    <Tip>
+      Gemini 1.5 Flash offers the lowest absolute costs while maintaining 4x ratio.
+    </Tip>
+  </Tab>
+  
+  <Tab title="Meta">
+    | Model | Input (per 1M) | Output (per 1M) | Ratio |
+    |-------|----------------|-----------------|-------|
+    | Llama 3.1 405B | $2.70 | $2.70 | 1.0x |
+    | Llama 3.1 70B | $0.35 | $0.40 | 1.14x |
+    | Llama 3.1 8B | $0.055 | $0.055 | 1.0x |
+    
+    <Tip>
+      Llama models have the most balanced pricing - some with equal input/output costs!
+    </Tip>
+  </Tab>
+</Tabs>
+
+### Why Output Costs More
+
+<AccordionGroup>
+  <Accordion title="Computational Requirements">
+    Generating tokens requires more computation than processing them:
+    
+    **Input Processing:**
+    - One forward pass through model
+    - Parallel processing possible
+    - Relatively fast
+    
+    **Output Generation:**
+    - Multiple forward passes (one per token)
+    - Sequential processing required
+    - Sampling and search algorithms
+    - Quality checks and safety filters
+    
+    Result: 4-5x more computational resources.
+  </Accordion>
+  
+  <Accordion title="Business Model">
+    Providers incentivize efficient usage:
+    
+    - Encourages concise prompts (lower input)
+    - Rewards efficient prompt engineering
+    - Discourages generating unnecessary output
+    - Balances infrastructure costs
+  </Accordion>
+  
+  <Accordion title="Memory and Attention">
+    Output generation requires maintaining full context:
+    
+    ```plaintext
+    Input: Process once and cache
+    Output: Each token attends to all previous tokens
+    
+    Example - Generating 1000 tokens:
+    Token 1:   Attends to input (e.g., 500 tokens)
+    Token 2:   Attends to input + token 1 (501 tokens)
+    Token 3:   Attends to input + tokens 1-2 (502 tokens)
+    ...
+    Token 1000: Attends to all (1,500 tokens)
+    
+    Total attention operations: 500,500
+    ```
+    
+    This quadratic growth makes output expensive.
+  </Accordion>
+</AccordionGroup>
+
+## Tokenizador's Cost Display
+
+### What's Shown in the Interface
+
+```javascript
+// From statistics-calculator.js:16-37
+calculateStatistics(text, tokenResult, modelId) {
+  const modelInfo = MODELS_DATA[modelId];
+  const tokenCount = tokenResult.count || 0;
+  const costEstimate = this.calculateCost(tokenCount, modelInfo);
+  
+  return {
+    tokenCount,
+    charCount: text.length,
+    wordCount: this.countWords(text),
+    costEstimate,              // Input cost only
+    inputCostPer1M: modelInfo.inputCost,
+    outputCostPer1M: modelInfo.outputCost
+  };
+}
+```
+
+<CardGroup cols={2}>
+  <Card title="Displayed Cost" icon="dollar-sign">
+    The main cost display shows **input token cost only**:
+    
+    ```plaintext
+    Your text: 1,000 tokens
+    Model: GPT-4o
+    
+    Displayed: $0.0025
+    Calculation: 1000 / 1,000,000 × $2.50
+    ```
+    
+    This represents the cost to send your text to the model.
+  </Card>
+  
+  <Card title="Full Cost Info" icon="info-circle">
+    Model information panel shows both:
+    
+    ```plaintext
+    Input: $2.50/1M tokens
+    Output: $10.00/1M tokens
+    ```
+    
+    You must account for output costs separately based on expected response length.
+  </Card>
+</CardGroup>
+
+### Calculating Total API Cost
+
+<Tabs>
+  <Tab title="Interactive Chat">
+    ```javascript
+    // Example: Customer support chatbot
+    
+    const inputTokens = 500;      // User message + context
+    const outputTokens = 200;     // Bot response
+    const model = 'GPT-4o Mini';
+    
+    const inputCost = (500 / 1_000_000) * 0.15;   // $0.000075
+    const outputCost = (200 / 1_000_000) * 0.60;  // $0.000120
+    const totalCost = inputCost + outputCost;     // $0.000195
+    
+    // Per 1M conversations:
+    const millionConversations = totalCost * 1_000_000;  // $195
+    ```
+    
+    <Note>
+      Output typically costs more despite fewer tokens.
+    </Note>
+  </Tab>
+  
+  <Tab title="Content Generation">
+    ```javascript
+    // Example: Blog post generation
+    
+    const inputTokens = 1000;     // Prompt + instructions
+    const outputTokens = 2000;    // Generated article
+    const model = 'Claude 3.5 Sonnet';
+    
+    const inputCost = (1000 / 1_000_000) * 3.00;   // $0.003
+    const outputCost = (2000 / 1_000_000) * 15.00; // $0.030
+    const totalCost = inputCost + outputCost;      // $0.033
+    
+    // Output dominates: 91% of total cost
+    ```
+    
+    <Warning>
+      For content generation, output costs dominate. Choose models with favorable output pricing.
+    </Warning>
+  </Tab>
+  
+  <Tab title="Document Analysis">
+    ```javascript
+    // Example: Analyzing documents
+    
+    const inputTokens = 50000;    // Large document
+    const outputTokens = 500;     // Summary/analysis
+    const model = 'Gemini 1.5 Flash';
+    
+    const inputCost = (50000 / 1_000_000) * 0.075;  // $0.00375
+    const outputCost = (500 / 1_000_000) * 0.30;    // $0.00015
+    const totalCost = inputCost + outputCost;       // $0.00390
+    
+    // Input dominates: 96% of total cost
+    ```
+    
+    <Tip>
+      For document analysis with short outputs, prioritize low input costs.
+    </Tip>
+  </Tab>
+</Tabs>
+
+## Cost Optimization Strategies
+
+### 1. Model Selection
+
+<AccordionGroup>
+  <Accordion title="Match Model to Task Complexity">
+    Don't use expensive models for simple tasks:
+    
+    ```javascript
+    // Task complexity analysis
+    const taskToModel = {
+      // Simple tasks - use cheapest models
+      'classification': ['GPT-4o Mini', 'Gemini Flash', 'Llama 3.1 8B'],
+      'extraction': ['GPT-4o Mini', 'Command R', 'Mistral Nemo'],
+      'simple_qa': ['GPT-3.5 Turbo', 'Claude Haiku', 'Gemini Flash'],
+      
+      // Medium tasks - balance cost and quality
+      'summarization': ['GPT-4o', 'Claude 3.5 Sonnet', 'Llama 3.1 70B'],
+      'translation': ['GPT-4o', 'Command R+', 'Qwen 2.5'],
+      'analysis': ['GPT-4o', 'Claude Sonnet', 'Mistral Large'],
+      
+      // Complex tasks - use best models
+      'reasoning': ['GPT-4o', 'Claude 3.5 Sonnet', 'Claude Opus'],
+      'code_generation': ['GPT-4o', 'Claude 3.5 Sonnet', 'Llama 3.1 405B'],
+      'creative_writing': ['GPT-4o', 'Claude 3.5 Sonnet', 'Command R+']
+    };
+    ```
+    
+    **Potential savings:** 80-95% by using appropriate models.
+  </Accordion>
+  
+  <Accordion title="Consider Token Efficiency">
+    Models with lower token ratios save costs:
+    
+    ```javascript
+    // Same 10,000 character input
+    const text = "...10,000 characters...";
+    
+    // Token counts (approximate)
+    const tokenization = {
+      'Qwen 2.5':    2300,  // 0.92 ratio
+      'Llama 3.1':   2375,  // 0.95 ratio  
+      'GPT-4o':      2500,  // 1.0 ratio (baseline)
+      'Gemini 1.5':  2625,  // 1.05 ratio
+      'Claude 3.5':  2750   // 1.1 ratio
+    };
+    
+    // Cost comparison at $0.35 per 1M (Llama 3.1 70B pricing)
+    const costs = {
+      'Qwen 2.5':   (2300 / 1_000_000) * 0.35,  // $0.000805
+      'Llama 3.1':  (2375 / 1_000_000) * 0.35,  // $0.000831
+      'GPT-4o':     (2500 / 1_000_000) * 2.50,  // $0.00625
+      'Claude 3.5': (2750 / 1_000_000) * 3.00   // $0.00825
+    };
+    ```
+    
+    **Key insight:** Token efficiency matters most when prices are similar.
+  </Accordion>
+  
+  <Accordion title="Batch Processing Discounts">
+    Some providers offer batch processing:
+    
+    ```javascript
+    // OpenAI Batch API example
+    const standardCost = {
+      'GPT-4o': 2.50,           // Input per 1M
+      'GPT-4o Batch': 1.25      // 50% discount
+    };
+    
+    // Trade-off: 24-hour processing time
+    // Best for: Non-urgent bulk processing
+    ```
+    
+    Check provider docs for batch discounts (not shown in Tokenizador).
+  </Accordion>
+</AccordionGroup>
+
+### 2. Prompt Engineering
+
+<AccordionGroup>
+  <Accordion title="Reduce Input Tokens">
+    Every token costs money:
+    
+    ```javascript
+    // Verbose prompt (expensive)
+    const verbosePrompt = `
+    I would really appreciate it if you could please take a moment 
+    to carefully analyze the following text and provide me with a 
+    comprehensive summary that captures all of the main points and 
+    key ideas presented in the document.
+    `;
+    // Tokens: ~45
+    
+    // Concise prompt (efficient)
+    const concisePrompt = `
+    Summarize the key points:
+    `;
+    // Tokens: ~7
+    
+    // Savings: 84% reduction
+    ```
+    
+    **Best practices:**
+    - Remove filler words
+    - Use direct instructions
+    - Avoid redundancy
+    - Let the model infer context
+  </Accordion>
+  
+  <Accordion title="Control Output Length">
+    Limit unnecessary generation:
+    
+    ```javascript
+    // Uncontrolled output
+    const openEnded = "Explain quantum computing.";
+    // Model might generate: 2000+ tokens
+    
+    // Controlled output
+    const controlled = "Explain quantum computing in 100 words.";
+    // Model generates: ~130 tokens (includes some overhead)
+    
+    // Cost comparison (GPT-4o):
+    // Uncontrolled: 2000 tokens × $10/1M = $0.020
+    // Controlled:   130 tokens × $10/1M  = $0.0013
+    // Savings: 93.5%
+    ```
+    
+    **Techniques:**
+    - Specify word/token limits
+    - Request bullet points instead of paragraphs
+    - Use "briefly" or "concisely"
+    - Set max_tokens in API calls
+  </Accordion>
+  
+  <Accordion title="Reuse Context Efficiently">
+    Minimize repeated context:
+    
+    ```javascript
+    // Inefficient: Resending full context each time
+    const inefficientChat = [
+      { tokens: 5000 },  // Initial context + message 1
+      { tokens: 5100 },  // Full context + message 2
+      { tokens: 5200 },  // Full context + message 3
+    ];
+    // Total: 15,300 tokens
+    
+    // Efficient: Use conversation memory strategically
+    const efficientChat = [
+      { tokens: 5000 },  // Initial context + message 1
+      { tokens: 1100 },  // Recent context + message 2
+      { tokens: 1200 },  // Recent context + message 3
+    ];
+    // Total: 7,300 tokens (52% savings)
+    ```
+    
+    **Strategies:**
+    - Maintain summary of conversation
+    - Only send recent exchanges
+    - Use semantic search for relevant context
+    - Clear context when topic changes
+  </Accordion>
+</AccordionGroup>
+
+### 3. Caching and Preprocessing
+
+<AccordionGroup>
+  <Accordion title="Cache Common Responses">
+    Store and reuse frequent outputs:
+    
+    ```javascript
+    // Example: FAQ system
+    const cache = new Map();
+    
+    async function getAnswer(question) {
+      // Check cache first
+      const cacheKey = normalizeQuestion(question);
+      if (cache.has(cacheKey)) {
+        return cache.get(cacheKey);  // $0 cost
+      }
+      
+      // Call API only for new questions
+      const answer = await callAI(question);  // Full cost
+      cache.set(cacheKey, answer);
+      return answer;
+    }
+    
+    // If 70% of questions are repeats:
+    // Savings: 70% of API costs
+    ```
+  </Accordion>
+  
+  <Accordion title="Preprocess and Compress">
+    Reduce token count before API calls:
+    
+    ```javascript
+    // Remove unnecessary whitespace
+    function compress(text) {
+      return text
+        .replace(/\s+/g, ' ')           // Multiple spaces → single
+        .replace(/\n\s*\n/g, '\n')      // Multiple newlines → single
+        .trim();
+    }
+    
+    // Example:
+    const original = `
+      This  has     extra    spaces.
+      
+      
+      And multiple blank lines.
+    `;
+    // Tokens: ~18
+    
+    const compressed = compress(original);
+    // "This has extra spaces. And multiple blank lines."
+    // Tokens: ~11
+    // Savings: 39%
+    ```
+  </Accordion>
+  
+  <Accordion title="Use Embeddings for Retrieval">
+    Embeddings are much cheaper than generation:
+    
+    ```javascript
+    // Cost comparison
+    const embedding = {
+      model: 'text-embedding-3-small',
+      inputCost: 0.02,        // Per 1M tokens
+      outputCost: 0           // No output
+    };
+    
+    const generation = {
+      model: 'GPT-4o',
+      inputCost: 2.50,        // Per 1M tokens
+      outputCost: 10.00       // Per 1M tokens
+    };
+    
+    // Embedding 1M tokens: $0.02
+    // Generating 1M tokens: $12.50 (input + output)
+    // Embeddings are 625x cheaper!
+    ```
+    
+    **Use case:** Semantic search instead of asking AI to find information.
+  </Accordion>
+</AccordionGroup>
+
+## Real-World Cost Scenarios
+
+### Scenario 1: Customer Support Chatbot
+
+<Tabs>
+  <Tab title="Requirements">
+    - 10,000 conversations per day
+    - Average 5 exchanges per conversation
+    - 100 tokens per user message (with context)
+    - 150 tokens per bot response
+    - Need high quality responses
+  </Tab>
+  
+  <Tab title="Option 1: GPT-4o">
+    ```javascript
+    // Per conversation costs
+    const inputTokens = 100 * 5;      // 500 tokens
+    const outputTokens = 150 * 5;     // 750 tokens
+    
+    const inputCost = (500 / 1_000_000) * 2.50;   // $0.00125
+    const outputCost = (750 / 1_000_000) * 10.00; // $0.0075
+    const perConversation = 0.00875;
+    
+    // Monthly costs
+    const daily = 10_000 * 0.00875;              // $87.50
+    const monthly = daily * 30;                   // $2,625
+    ```
+  </Tab>
+  
+  <Tab title="Option 2: GPT-4o Mini">
+    ```javascript
+    // Per conversation costs
+    const inputTokens = 100 * 5;      // 500 tokens
+    const outputTokens = 150 * 5;     // 750 tokens
+    
+    const inputCost = (500 / 1_000_000) * 0.15;  // $0.000075
+    const outputCost = (750 / 1_000_000) * 0.60; // $0.00045
+    const perConversation = 0.000525;
+    
+    // Monthly costs
+    const daily = 10_000 * 0.000525;             // $5.25
+    const monthly = daily * 30;                   // $157.50
+    
+    // Savings vs GPT-4o: $2,467.50/month (94%)
+    ```
+  </Tab>
+  
+  <Tab title="Recommendation">
+    **Best Choice: GPT-4o Mini**
+    
+    **Reasoning:**
+    - 94% cost savings ($157.50 vs $2,625)
+    - Quality sufficient for most support queries
+    - Can escalate complex cases to GPT-4o
+    
+    **Hybrid approach:**
+    ```javascript
+    // 80% simple queries → GPT-4o Mini
+    const simpleCost = 8000 * 0.000525 * 30;  // $126
+    
+    // 20% complex queries → GPT-4o
+    const complexCost = 2000 * 0.00875 * 30;  // $525
+    
+    const totalHybrid = 126 + 525;            // $651/month
+    // Still 75% cheaper than all GPT-4o
+    ```
+  </Tab>
+</Tabs>
+
+### Scenario 2: Document Summarization Service
+
+<Tabs>
+  <Tab title="Requirements">
+    - 1,000 documents per day
+    - Average 20,000 tokens per document
+    - Generate 500 token summaries
+    - Accuracy is critical
+  </Tab>
+  
+  <Tab title="Cost Analysis">
+    ```javascript
+    // Token counts
+    const inputPerDoc = 20_000;
+    const outputPerDoc = 500;
+    const docsPerDay = 1_000;
+    
+    // Model comparison
+    const models = [
+      {
+        name: 'Claude 3 Haiku',
+        inputCost: 0.25,
+        outputCost: 1.25,
+        daily: (
+          (inputPerDoc * docsPerDay / 1_000_000) * 0.25 +
+          (outputPerDoc * docsPerDay / 1_000_000) * 1.25
+        ),  // $5.625/day
+        monthly: 5.625 * 30  // $168.75
+      },
+      {
+        name: 'Gemini 1.5 Flash',
+        inputCost: 0.075,
+        outputCost: 0.30,
+        daily: (
+          (inputPerDoc * docsPerDay / 1_000_000) * 0.075 +
+          (outputPerDoc * docsPerDay / 1_000_000) * 0.30
+        ),  // $1.65/day
+        monthly: 1.65 * 30  // $49.50
+      },
+      {
+        name: 'Llama 3.1 70B',
+        inputCost: 0.35,
+        outputCost: 0.40,
+        daily: (
+          (inputPerDoc * docsPerDay / 1_000_000) * 0.35 +
+          (outputPerDoc * docsPerDay / 1_000_000) * 0.40
+        ),  // $7.20/day
+        monthly: 7.20 * 30  // $216
+      }
+    ];
+    ```
+  </Tab>
+  
+  <Tab title="Recommendation">
+    **Best Choice: Gemini 1.5 Flash**
+    
+    **Reasoning:**
+    - Lowest cost: $49.50/month
+    - Excellent summarization quality
+    - 1M token context (can handle any document)
+    - 71% cheaper than Claude Haiku
+    - 77% cheaper than Llama 3.1 70B
+    
+    **Annual savings:**
+    ```javascript
+    const savings = {
+      vs_claude: (168.75 - 49.50) * 12,   // $1,431/year
+      vs_llama: (216 - 49.50) * 12        // $1,998/year
+    };
+    ```
+  </Tab>
+</Tabs>
+
+### Scenario 3: Code Analysis Tool
+
+<Tabs>
+  <Tab title="Requirements">
+    - Analyze codebases for bugs and improvements
+    - Average codebase: 50,000 tokens
+    - Generate 2,000 token reports
+    - 100 analyses per day
+    - Need high accuracy
+  </Tab>
+  
+  <Tab title="Cost Analysis">
+    ```javascript
+    const inputTokens = 50_000;
+    const outputTokens = 2_000;
+    const runsPerDay = 100;
+    
+    const models = [
+      {
+        name: 'GPT-4o',
+        input: 2.50,
+        output: 10.00,
+        daily: (
+          (inputTokens * runsPerDay / 1_000_000) * 2.50 +
+          (outputTokens * runsPerDay / 1_000_000) * 10.00
+        ),  // $14.50/day
+        monthly: 14.50 * 30  // $435
+      },
+      {
+        name: 'Claude 3.5 Sonnet',
+        input: 3.00,
+        output: 15.00,
+        daily: (
+          (inputTokens * runsPerDay / 1_000_000) * 3.00 +
+          (outputTokens * runsPerDay / 1_000_000) * 15.00
+        ),  // $18/day
+        monthly: 18 * 30  // $540
+      },
+      {
+        name: 'Llama 3.1 405B',
+        input: 2.70,
+        output: 2.70,
+        daily: (
+          (inputTokens * runsPerDay / 1_000_000) * 2.70 +
+          (outputTokens * runsPerDay / 1_000_000) * 2.70
+        ),  // $14.04/day
+        monthly: 14.04 * 30  // $421.20
+      }
+    ];
+    ```
+  </Tab>
+  
+  <Tab title="Recommendation">
+    **Best Choice: Llama 3.1 405B**
+    
+    **Reasoning:**
+    - Lowest cost: $421.20/month
+    - Excellent code understanding
+    - Balanced input/output pricing (2.70 both)
+    - 3% cheaper than GPT-4o
+    - 22% cheaper than Claude 3.5
+    
+    **Key advantage:** With large outputs (2K tokens), Llama's equal input/output pricing shines:
+    ```javascript
+    // Output cost comparison for 2,000 tokens
+    const outputCosts = {
+      'GPT-4o': (2000 / 1_000_000) * 10.00,        // $0.020
+      'Claude 3.5': (2000 / 1_000_000) * 15.00,    // $0.030
+      'Llama 3.1': (2000 / 1_000_000) * 2.70       // $0.0054
+    };
+    // Llama 73% cheaper on outputs!
+    ```
+  </Tab>
+</Tabs>
+
+## Cost Tracking and Monitoring
+
+### Build Your Own Cost Calculator
+
+```javascript
+// Comprehensive cost tracking
+class CostTracker {
+  constructor(modelId) {
+    this.modelInfo = MODELS_DATA[modelId];
+    this.totalInputTokens = 0;
+    this.totalOutputTokens = 0;
+  }
+  
+  trackRequest(inputTokens, outputTokens) {
+    this.totalInputTokens += inputTokens;
+    this.totalOutputTokens += outputTokens;
+  }
+  
+  getCurrentCost() {
+    const inputCost = (this.totalInputTokens / 1_000_000) * 
+                      this.modelInfo.inputCost;
+    const outputCost = (this.totalOutputTokens / 1_000_000) * 
+                       this.modelInfo.outputCost;
+    return {
+      input: inputCost,
+      output: outputCost,
+      total: inputCost + outputCost,
+      breakdown: {
+        inputPercentage: (inputCost / (inputCost + outputCost)) * 100,
+        outputPercentage: (outputCost / (inputCost + outputCost)) * 100
+      }
+    };
+  }
+  
+  getProjections(requestsPerDay) {
+    const avgInputPerRequest = this.totalInputTokens / this.requestCount;
+    const avgOutputPerRequest = this.totalOutputTokens / this.requestCount;
+    
+    return {
+      daily: this.projectCost(requestsPerDay, avgInputPerRequest, avgOutputPerRequest),
+      monthly: this.projectCost(requestsPerDay * 30, avgInputPerRequest, avgOutputPerRequest),
+      annual: this.projectCost(requestsPerDay * 365, avgInputPerRequest, avgOutputPerRequest)
+    };
+  }
+}
+```
+
+### Monitoring Dashboard Metrics
+
+<CardGroup cols={2}>
+  <Card title="Token Efficiency" icon="gauge">
+    Track tokens per request:
+    ```javascript
+    {  
+      avgInputTokens: 1250,
+      avgOutputTokens: 800,
+      avgRatio: 0.64,
+      trend: "↓ 5% this week"
+    }
+    ```
+  </Card>
+  
+  <Card title="Cost per Request" icon="dollar-sign">
+    Monitor unit costs:
+    ```javascript
+    {
+      current: "$0.0042",
+      target: "$0.0035",
+      variance: "+20%",
+      status: "Above target"
+    }
+    ```
+  </Card>
+  
+  <Card title="Model Distribution" icon="chart-pie">
+    Track model usage:
+    ```javascript
+    {
+      "GPT-4o Mini": "75%",
+      "GPT-4o": "20%",
+      "Claude 3.5": "5%"
+    }
+    ```
+  </Card>
+  
+  <Card title="Optimization Opportunities" icon="lightbulb">
+    Identify savings:
+    ```javascript
+    {
+      "Reduce prompts": "$120/mo",
+      "Limit output": "$350/mo",
+      "Switch models": "$200/mo"
+    }
+    ```
+  </Card>
+</CardGroup>
+
+## Common Cost Mistakes
+
+<Warning>
+  Avoid these expensive mistakes:
+</Warning>
+
+<AccordionGroup>
+  <Accordion title="❌ Mistake 1: Using Premium Models for Everything">
+    **Problem:**
+    ```javascript
+    // Using GPT-4o for simple classification
+    const result = await classify(text, 'GPT-4o');
+    // Cost: $0.0025 per 1000 tokens
+    ```
+    
+    **Solution:**
+    ```javascript
+    // Use GPT-4o Mini for simple tasks
+    const result = await classify(text, 'GPT-4o Mini');
+    // Cost: $0.00015 per 1000 tokens
+    // Savings: 94%
+    ```
+  </Accordion>
+  
+  <Accordion title="❌ Mistake 2: Ignoring Output Costs">
+    **Problem:**
+    ```javascript
+    // Requesting verbose outputs
+    prompt = "Write a comprehensive, detailed analysis...";
+    // Output: 3000+ tokens at $10/1M = $0.030+
+    ```
+    
+    **Solution:**
+    ```javascript
+    // Request concise outputs
+    prompt = "Write a concise analysis (max 200 words)...";
+    // Output: ~300 tokens at $10/1M = $0.003
+    // Savings: 90%
+    ```
+  </Accordion>
+  
+  <Accordion title="❌ Mistake 3: Redundant Context">
+    **Problem:**
+    ```javascript
+    // Sending full conversation history every time
+    const context = fullHistory.join('\n');  // 10,000 tokens
+    const prompt = context + newMessage;     // +100 tokens
+    // Cost per message: $0.025
+    ```
+    
+    **Solution:**
+    ```javascript
+    // Summarize and limit context
+    const context = recentHistory.slice(-5).join('\n');  // 500 tokens
+    const prompt = context + newMessage;                  // +100 tokens
+    // Cost per message: $0.0015
+    // Savings: 94%
+    ```
+  </Accordion>
+  
+  <Accordion title="❌ Mistake 4: No Caching Strategy">
+    **Problem:**
+    ```javascript
+    // Regenerating same content repeatedly
+    for (let i = 0; i < 1000; i++) {
+      await generateFAQ(commonQuestion);
+    }
+    // Cost: 1000x API calls
+    ```
+    
+    **Solution:**
+    ```javascript
+    // Cache frequent responses
+    const cached = cache.get(commonQuestion);
+    if (cached) return cached;
+    
+    const result = await generateFAQ(commonQuestion);
+    cache.set(commonQuestion, result);
+    // Cost: 1x API call (999 cache hits = $0)
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Tools and Resources
+
+<CardGroup cols={2}>
+  <Card title="Tokenizador" icon="calculator" href="/guides/how-to-use">
+    Use this tool to estimate costs before implementation
+  </Card>
+  
+  <Card title="Model Comparison" icon="robot" href="/guides/supported-models">
+    Compare pricing across all 67+ supported models
+  </Card>
+  
+  <Card title="OpenAI Pricing" icon="link" href="https://openai.com/pricing">
+    Official OpenAI pricing page
+  </Card>
+  
+  <Card title="Anthropic Pricing" icon="link" href="https://anthropic.com/pricing">
+    Official Anthropic pricing page
+  </Card>
+  
+  <Card title="Cost Calculator Spreadsheet" icon="table">
+    Build a custom spreadsheet with your usage patterns
+  </Card>
+  
+  <Card title="API Usage Dashboards" icon="chart-line">
+    Monitor actual costs through provider dashboards
+  </Card>
+</CardGroup>
+
+## Quick Reference
+
+### Budget Models (< $0.20 per 1M input)
+
+| Model | Input | Output | Best For |
+|-------|-------|--------|----------|
+| Granite 3 2B | $0.025 | $0.025 | Ultra-low-cost tasks |
+| Llama 3.1 8B | $0.055 | $0.055 | Budget-friendly general use |
+| Gemini 1.5 Flash | $0.075 | $0.30 | High-volume, large context |
+| DeepSeek V2.5 | $0.14 | $0.28 | Balanced budget option |
+| GPT-4o Mini | $0.15 | $0.60 | Quality on a budget |
+
+### Key Cost Principles
+
+<Steps>
+  <Step title="Output costs 2-5x more than input">
+    Always optimize for shorter outputs when possible.
+  </Step>
+  
+  <Step title="Token efficiency varies by model">
+    Consider tokenRatio when comparing costs.
+  </Step>
+  
+  <Step title="Match model to task complexity">
+    Don't overspend on simple tasks.
+  </Step>
+  
+  <Step title="Cache aggressively">
+    Reuse responses whenever possible.
+  </Step>
+  
+  <Step title="Monitor and optimize">
+    Track costs and iterate on efficiency.
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="How to Use" icon="book-open" href="/guides/how-to-use">
+    Learn to use Tokenizador effectively
+  </Card>
+  
+  <Card title="Supported Models" icon="robot" href="/guides/supported-models">
+    Full model specifications and pricing
+  </Card>
+</CardGroup>
