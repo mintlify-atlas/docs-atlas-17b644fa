@@ -1,0 +1,93 @@
+{
+  "projectType": "frontend",
+  "projectName": "Tokenizador",
+  "projectDescription": "A real-time AI tokenization visualization tool that shows how 67+ AI models process and tokenize text",
+  "theme": "palm",
+  "primaryColor": "#6366f1",
+  "lightColor": null,
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/how-to-use",
+              "guides/supported-models",
+              "guides/understanding-tokenization",
+              "guides/cost-estimation"
+            ]
+          },
+          {
+            "group": "Architecture",
+            "pages": [
+              "architecture/overview",
+              "architecture/components"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Core Classes",
+            "pages": [
+              "api/token-analyzer",
+              "api/tokenization-service",
+              "api/ui-controller",
+              "api/statistics-calculator"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "api/models-config"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Resources",
+        "groups": [
+          {
+            "group": "Help",
+            "pages": [
+              "resources/faq",
+              "resources/troubleshooting"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Real-time tokenization with tiktoken library",
+    "Support for 67+ AI models from OpenAI, Anthropic, Google, Meta, and more",
+    "Interactive token visualization with color-coded display",
+    "Automatic cost estimation per model",
+    "Detailed statistics (tokens, characters, words)",
+    "Context limit warnings",
+    "Model comparison capabilities",
+    "Export functionality (JSON, CSV, TXT)",
+    "Modular architecture with services, controllers, and utilities"
+  ],
+  "publicApiSurface": [
+    "TokenAnalyzer",
+    "TokenizationService",
+    "UIController",
+    "StatisticsCalculator",
+    "MODELS_DATA",
+    "MODEL_ENCODINGS",
+    "COMPANIES"
+  ]
+}
